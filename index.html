@@ -5,16 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" data-page-node-id="5ejuJrv9morl8G2b6m3ey1">
 <title>山海战棋 · 中国神话推进战棋</title>
 <style>
+  /* ==================== 水墨风主题 ====================
+     配色：宣纸米底 + 墨色 + 朱砂红 + 赭金 + 苔绿
+     字体：默认无衬线（像素图标 + 数据），中文字符优先 PingFang/STKaiti
+     去紫边框：所有 border / 强调色都从紫色系迁到墨/朱砂/赭金系 */
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
   html,body { height:100%; overflow:hidden; }
-  body { background:#12091f; color:#f2ecff; font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;
-    display:flex; justify-content:center; align-items:stretch; }
+  body {
+    background:#ebe2c8 url('assets/bg-ink.png') center/cover no-repeat;
+    color:#2d2820;
+    font-family:-apple-system,"PingFang SC","Helvetica Neue","STKaiti","KaiTi",sans-serif;
+    display:flex; justify-content:center; align-items:stretch;
+  }
 
   /* ===== 布局骨架：整屏无滚动，Grid 分区 =====
      移动端（默认）单列纵向：信息 / 日志 / 棋盘(1fr) / 状态 / 商店 / 控制
-     大屏见底部媒体查询：三栏（左信息 / 中棋盘 / 右商店） */
-  .phone { width:100%; max-width:460px; height:100vh; height:100dvh; padding:6px 10px;
-    position:relative; display:grid; gap:4px; overflow:hidden;
+     大屏见底部媒体查询：三栏（左信息 / 中棋盘 / 右商店）
+     全屏铺满：去掉 .phone 的 max-width 限制，背景水墨图直接透过整屏 */
+  .phone { width:100%; height:100vh; height:100dvh; padding:8px 10px;
+    position:relative; display:grid; gap:5px; overflow:hidden;
     grid-template-columns:1fr;
     grid-template-rows:auto auto minmax(0,1fr) auto auto auto;
     grid-template-areas:"top" "log" "board" "status" "shop" "ctrl"; }
@@ -29,95 +38,106 @@
   /* 棋盘居中容器：吸收剩余高度，棋盘在其中等比 contain */
   .board-wrap { flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; }
 
-  .topbar { display:flex; justify-content:space-between; align-items:center; padding:4px 6px; margin-bottom:4px; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; padding:6px 8px; margin-bottom:4px;
+    background:rgba(244,236,216,0.78); border:1px solid rgba(58,48,36,0.3); border-radius:8px;
+    backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
   .life-box { display:flex; flex-direction:column; align-items:center; gap:2px; }
-  .life-side { font-size:9px; color:#b8a9e8; }
+  .life-side { font-size:9px; color:#6b6354; font-weight:500; }
   .lives { display:flex; gap:2px; align-items:center; font-size:13px; }
   .lives .hp { font-size:13px; line-height:1; }
   .lives .hp.off { opacity:0.28; filter:grayscale(1); }
-  .round-chip { font-size:12px; color:#ffd45e; background:rgba(255,212,94,0.12); border-radius:12px; padding:3px 10px; }
+  .round-chip { font-size:12px; color:#8a6d3b; background:rgba(184,148,94,0.18);
+    border:1px solid rgba(184,148,94,0.4); border-radius:12px; padding:3px 10px; font-weight:600; }
 
   /* 经验条（账号等级） */
-  .expbar-wrap { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05);
-    border:1px solid rgba(255,212,94,0.25); border-radius:10px; padding:7px 10px; margin-bottom:10px; }
-  .lv-badge { background:linear-gradient(135deg,#7f77dd,#534ab7); color:#fff; font-size:11px; font-weight:700;
-    border-radius:8px; padding:3px 9px; white-space:nowrap; }
-  .exp-track { flex:1; height:8px; background:rgba(255,255,255,0.1); border-radius:5px; overflow:hidden; }
-  .exp-fill { height:100%; background:linear-gradient(90deg,#ffd45e,#FAC775); border-radius:5px; transition:width 0.4s; }
-  .exp-num { font-size:10px; color:#ffd45e; white-space:nowrap; }
+  .expbar-wrap { display:flex; align-items:center; gap:8px;
+    background:rgba(244,236,216,0.85); border:1px solid rgba(58,48,36,0.3);
+    border-radius:10px; padding:7px 10px; margin-bottom:10px; }
+  .lv-badge { background:linear-gradient(135deg,#3a3024,#1f1a14); color:#f4ecd8;
+    font-size:11px; font-weight:700; border-radius:8px; padding:3px 9px; white-space:nowrap; }
+  .exp-track { flex:1; height:8px; background:rgba(58,48,36,0.15); border-radius:5px; overflow:hidden; }
+  .exp-fill { height:100%; background:linear-gradient(90deg,#b8945e,#8a6d3b); border-radius:5px; transition:width 0.4s; }
+  .exp-num { font-size:10px; color:#8a6d3b; white-space:nowrap; font-weight:600; }
 
   /* 英雄属性可视化 */
   .attr-row { display:flex; gap:5px; justify-content:center; margin-top:3px; flex-wrap:wrap; }
-  .attr { display:flex; align-items:center; gap:2px; background:rgba(255,255,255,0.07);
-    border-radius:5px; padding:1px 4px; font-size:9px; color:#e8dcff; }
+  .attr { display:flex; align-items:center; gap:2px; background:rgba(244,236,216,0.7);
+    border:1px solid rgba(58,48,36,0.2); border-radius:5px; padding:1px 4px;
+    font-size:9px; color:#2d2820; }
   .attr .ico { font-size:10px; }
-  .attr.hp { background:rgba(75,224,75,0.14); }
-  .attr.gold { background:rgba(255,233,168,0.16); }
-  .attr.rng { background:rgba(133,183,235,0.16); }
-  .attr.tgt { background:rgba(226,75,74,0.16); }
-  .attr.heal { background:rgba(107,255,154,0.16); }
-  /* 迷你射程网格：以英雄为中心 5x5，高亮可达格 */
+  .attr.hp { background:rgba(192,57,43,0.12); }
+  .attr.gold { background:rgba(184,148,94,0.2); }
+  .attr.rng { background:rgba(58,48,36,0.12); }
+  .attr.tgt { background:rgba(192,57,43,0.12); }
+  .attr.heal { background:rgba(107,142,78,0.2); }
+  /* 迷你射程网格 */
   .range-grid { display:grid; grid-template-columns:repeat(5,7px); gap:1px; margin-top:4px; }
-  .rg { width:7px; height:7px; border-radius:1px; background:rgba(255,255,255,0.09); }
-  .rg.in { background:#85B7EB; }
-  .rg.self { background:#ffd45e; }
+  .rg { width:7px; height:7px; border-radius:1px; background:rgba(58,48,36,0.18); }
+  .rg.in { background:#6b8e4e; }
+  .rg.self { background:#8a6d3b; }
 
   /* 拖拽时棋盘射程高亮 */
-  .cell.inrange { box-shadow:inset 0 0 0 2px rgba(255,212,94,0.6); }
-  .cell.range-src { background:rgba(255,212,94,0.3) !important; box-shadow:inset 0 0 0 2px #ffd45e; }
-  .cell.droppable.inrange { background:rgba(107,255,154,0.1) !important; }
-  .cell.bad { box-shadow:inset 0 0 0 2px rgba(226,75,74,0.6); }
-  .pc.sel { box-shadow:0 0 0 2px #ffd45e, 0 0 12px rgba(255,212,94,0.6); }
-  /* 常驻射程（淡金）：己方棋子能打到的范围，一直可见 */
-  .cell.dimrange { background:rgba(255,212,94,0.07) !important; box-shadow:inset 0 0 0 1px rgba(255,212,94,0.22); }
-  /* 可放置空格（绿框）：拖拽时提示己方 4 排所有空格都能放 */
-  .cell.droppable { background:rgba(107,255,154,0.07) !important; box-shadow:inset 0 0 0 2px rgba(107,255,154,0.45); }
-  .legend { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; font-size:9px; color:#9a8fc0; margin-top:6px; }
+  .cell.inrange { box-shadow:inset 0 0 0 2px rgba(184,148,94,0.65); }
+  .cell.range-src { background:rgba(184,148,94,0.32) !important; box-shadow:inset 0 0 0 2px #8a6d3b; }
+  .cell.droppable.inrange { background:rgba(107,142,78,0.18) !important; }
+  .cell.bad { box-shadow:inset 0 0 0 2px rgba(192,57,43,0.65); }
+  .pc.sel { box-shadow:0 0 0 2px #8a6d3b, 0 0 12px rgba(184,148,94,0.6); }
+  /* 常驻射程：己方棋子能打到的范围 */
+  .cell.dimrange { background:rgba(184,148,94,0.12) !important; box-shadow:inset 0 0 0 1px rgba(184,148,94,0.35); }
+  /* 可放置空格（苔绿框） */
+  .cell.droppable { background:rgba(107,142,78,0.14) !important; box-shadow:inset 0 0 0 2px rgba(107,142,78,0.55); }
+  .legend { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; font-size:9px; color:#3a3024; margin-top:6px; }
   .legend span { display:flex; align-items:center; gap:3px; }
-  .sw { width:10px; height:10px; border-radius:2px; display:inline-block; }
-  .sw.g { background:rgba(107,255,154,0.35); } .sw.y { background:rgba(255,212,94,0.3); } .sw.r { background:rgba(226,75,74,0.5); }
+  .sw { width:10px; height:10px; border-radius:2px; display:inline-block; border:1px solid rgba(58,48,36,0.3); }
+  .sw.g { background:rgba(107,142,78,0.35); } .sw.y { background:rgba(184,148,94,0.3); } .sw.r { background:rgba(192,57,43,0.5); }
 
-  .quit-btn { background:rgba(226,75,74,0.18); color:#ff9a9a; border:1px solid rgba(226,75,74,0.4);
-    border-radius:8px; font-size:10px; padding:3px 8px; cursor:pointer; font-family:inherit; white-space:nowrap; }
-  .quit-btn:hover { background:rgba(226,75,74,0.3); }
+  .quit-btn { background:rgba(244,236,216,0.85); color:#8e2820;
+    border:1px solid rgba(192,57,43,0.4); border-radius:8px;
+    font-size:10px; padding:3px 8px; cursor:pointer; font-family:inherit; white-space:nowrap; font-weight:500; }
+  .quit-btn:hover { background:rgba(192,57,43,0.15); }
   .btn-row { display:flex; gap:8px; margin-top:14px; }
-  .btn-random { flex:1; background:rgba(255,255,255,0.08); color:#e8dcff; border:1px solid rgba(255,212,94,0.35);
-    font-size:14px; font-weight:600; padding:10px 0; }
+  .btn-random { flex:1; background:rgba(244,236,216,0.85); color:#2d2820;
+    border:1px solid rgba(58,48,36,0.4); font-size:14px; font-weight:600; padding:10px 0; }
   .btn-row .btn-confirm { flex:1; margin-top:0; }
-  .ms-sub { font-size:8px; color:#8878b0; margin-top:1px; }
+  .ms-sub { font-size:8px; color:#6b6354; margin-top:1px; }
 
   .rc.locked { opacity:0.4; filter:grayscale(0.85); cursor:not-allowed; position:relative; }
   .rc-lock { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
     justify-content:center; background:rgba(0,0,0,0.5); border-radius:10px; gap:1px; }
   .rc-lock .lk { font-size:14px; }
-  .rc-lock .lt { font-size:8px; color:#ffd45e; }
-  .logbar { font-size:11px; color:#c9bdf0; background:rgba(255,255,255,0.04); border-radius:8px; padding:5px 8px; margin-bottom:4px; min-height:15px; text-align:center; }
+  .rc-lock .lt { font-size:8px; color:#b8945e; }
+  .logbar { font-size:11px; color:#2d2820; background:rgba(244,236,216,0.8);
+    border:1px solid rgba(58,48,36,0.25); border-radius:8px; padding:5px 8px;
+    margin-bottom:4px; min-height:15px; text-align:center;
+    backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
 
-  .base-label { text-align:center; font-size:10px; padding:2px 0; border-radius:5px; margin:1px 0; }
-  .base-enemy { background:rgba(226,75,74,0.16); color:#ff9a9a; }
-  .base-player { background:rgba(75,163,255,0.16); color:#9cccff; }
+  .base-label { text-align:center; font-size:10px; padding:2px 0; border-radius:5px; margin:1px 0; font-weight:600; }
+  .base-enemy { background:rgba(192,57,43,0.15); color:#8e2820; border:1px solid rgba(192,57,43,0.3); }
+  .base-player { background:rgba(58,48,36,0.12); color:#1f1a14; border:1px solid rgba(58,48,36,0.3); }
 
-  /* 棋盘：整体保持 4:8 比例，在 board-wrap 内 contain 等比缩放，永不溢出 */
+  /* 棋盘：整体保持 4:8 比例，在 board-wrap 内 contain 等比缩放 */
   .board { aspect-ratio:4 / 8; max-width:100%; max-height:100%; width:auto; height:100%;
     display:flex; flex-direction:column; gap:2px; position:relative; }
   .brow { display:flex; gap:2px; align-items:stretch; position:relative; flex:1; min-height:0; }
   .cell { flex:1; min-width:0; border-radius:6px; display:flex; align-items:center; justify-content:center; position:relative; }
-  .cell.ez { background:rgba(226,75,74,0.05); border:1px dashed rgba(226,75,74,0.22); }
-  .cell.pz { background:rgba(75,163,255,0.05); border:1px dashed rgba(75,163,255,0.22); }
-  .cell.bz { background:rgba(255,212,94,0.07); border:1px dashed rgba(255,212,94,0.38); }
-  .cell.dragover { background:rgba(255,212,94,0.25); border:2px solid #ffd45e; }
+  /* 三个区域：敌方半区朱砂淡晕、我方半区淡墨、备战排赭金 */
+  .cell.ez { background:rgba(192,57,43,0.06); border:1px dashed rgba(192,57,43,0.32); }
+  .cell.pz { background:rgba(58,48,36,0.04); border:1px dashed rgba(58,48,36,0.25); }
+  .cell.bz { background:rgba(184,148,94,0.18); border:1px dashed rgba(184,148,94,0.55); }
+  .cell.dragover { background:rgba(184,148,94,0.32); border:2px solid #8a6d3b; }
 
   .pc { width:90%; height:90%; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center;
-        position:relative; background:rgba(255,255,255,0.04); }
-  .pc.player { border:2px solid #4bd0ff; }
-  .pc.enemy { border:2px solid #ff6b6b; }
+        position:relative; background:rgba(244,236,216,0.75); border:1px solid rgba(58,48,36,0.25);
+        backdrop-filter:blur(1px); -webkit-backdrop-filter:blur(1px); }
+  .pc.player { border:2px solid #1f4a6e; }
+  .pc.enemy { border:2px solid #c0392b; }
   .pc-emoji { flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; font-size:21px; line-height:1; }
   .sprite { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; image-rendering:pixelated; pointer-events:none; }
-  .pc-name { font-size:8px; color:#dcd0ff; margin-top:1px; }
+  .pc-name { font-size:8px; color:#2d2820; margin-top:1px; font-weight:600; }
   .lives-row { display:flex; gap:2px; margin-top:2px; }
-  .lp { width:5px; height:5px; border-radius:50%; background:#4be04b; }
-  .lp.empty { background:rgba(255,255,255,0.2); }
-  .lp.hurt { background:#e2b04b; }
+  .lp { width:5px; height:5px; border-radius:50%; background:#c0392b; }
+  .lp.empty { background:rgba(58,48,36,0.25); }
+  .lp.hurt { background:#b8945e; }
 
   /* 动画：登场 / 前进 / 攻击 / 受击 */
   @keyframes enterPop { 0%{transform:scale(0.2) rotate(-25deg);opacity:0;} 60%{transform:scale(1.25) rotate(6deg);opacity:1;} 100%{transform:scale(1) rotate(0);opacity:1;} }
@@ -133,74 +153,92 @@
 
   /* 飘字 */
   .float { position:absolute; font-size:15px; font-weight:700; pointer-events:none; z-index:20;
-           text-shadow:0 1px 3px rgba(0,0,0,0.9); animation: floatUp 1s ease-out forwards; }
-  .float.dmg { color:#ff6b6b; } .float.heal { color:#6bff9a; } .float.revive { color:#ffd45e; font-size:12px; }
+           text-shadow:0 1px 3px rgba(0,0,0,0.6); animation: floatUp 1s ease-out forwards; }
+  .float.dmg { color:#c0392b; } .float.heal { color:#6b8e4e; } .float.revive { color:#8a6d3b; font-size:12px; }
   @keyframes floatUp { 0%{transform:translateY(0) scale(0.7);opacity:0;} 22%{transform:translateY(-10px) scale(1.15);opacity:1;} 100%{transform:translateY(-34px) scale(1);opacity:0;} }
 
-  .slide-btn { position:absolute; z-index:6; background:rgba(75,163,255,0.9); color:#fff; border:none; border-radius:6px;
+  .slide-btn { position:absolute; z-index:6; background:rgba(244,236,216,0.92); color:#2d2820;
+               border:1px solid rgba(58,48,36,0.4); border-radius:6px;
                font-size:13px; width:20px; height:20px; line-height:20px; cursor:pointer; }
   .slide-btn.left { left:-9px; } .slide-btn.right { right:-9px; }
 
   /* 我方信息条（棋盘下方） */
   .mystatus { display:flex; justify-content:space-around; align-items:center; margin-top:6px;
-              background:rgba(75,163,255,0.08); border:1px solid rgba(75,163,255,0.2); border-radius:10px; padding:7px 10px; }
+              background:rgba(244,236,216,0.8); border:1px solid rgba(58,48,36,0.3);
+              border-radius:10px; padding:7px 10px;
+              backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
   .ms-item { display:flex; flex-direction:column; align-items:center; gap:2px; }
-  .ms-label { font-size:9px; color:#9cccff; }
-  .ms-val { font-size:16px; font-weight:700; color:#ffe9a8; }
+  .ms-label { font-size:9px; color:#6b6354; }
+  .ms-val { font-size:16px; font-weight:700; color:#8a6d3b; }
   .ms-val.small { font-size:13px; }
 
   /* 商店 */
-  .shop-title { font-size:10px; color:#b8a9e8; margin:8px 0 4px; display:flex; justify-content:space-between; align-items:center; }
+  .shop-title { font-size:10px; color:#3a3024; margin:8px 0 4px;
+  display:flex; justify-content:space-between; align-items:center; font-weight:600; }
   .shop { display:flex; gap:5px; flex-wrap:wrap; }
-  .shop-card { flex:1; min-width:62px; background:rgba(255,255,255,0.05); border:2px solid; border-radius:9px; padding:5px 2px;
-               display:flex; flex-direction:column; align-items:center; cursor:grab; position:relative; }
+  .shop-card { flex:1; min-width:62px; background:rgba(244,236,216,0.72); border:2px solid;
+               border-radius:8px; padding:5px 2px;
+               display:flex; flex-direction:column; align-items:center; cursor:grab; position:relative;
+               backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
   .shop-card:active { cursor:grabbing; }
   .shop-card.disabled { opacity:0.35; cursor:not-allowed; }
   .shop-card.locked { opacity:0.4; filter:grayscale(0.8); }
   .shop-card.dragging { opacity:0.35; }
-  .sc-emoji { font-size:20px; width:30px; height:30px; border-radius:7px; text-align:center; line-height:30px; }
-  .sc-name { font-size:9px; color:#fff; margin-top:2px; }
-  .sc-cost { font-size:11px; color:#ffe9a8; font-weight:600; }
-  .sc-meta { font-size:7px; color:#9a8fc0; }
+  .sc-emoji { font-size:20px; width:30px; height:30px; border-radius:7px;
+  text-align:center; line-height:30px; border:1px solid rgba(58,48,36,0.3); }
+  .sc-name { font-size:9px; color:#2d2820; margin-top:2px; font-weight:600; }
+  .sc-cost { font-size:11px; color:#8a6d3b; font-weight:600; }
+  .sc-meta { font-size:7px; color:#6b6354; }
   .sc-lock { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-             background:rgba(0,0,0,0.45); border-radius:7px; font-size:9px; color:#ffd45e; }
-  .sc-tip { font-size:8px; color:#8878b0; margin-top:1px; }
+             background:rgba(0,0,0,0.45); border-radius:7px; font-size:9px; color:#b8945e; }
+  .sc-tip { font-size:8px; color:#6b6354; margin-top:1px; }
 
+  /* 按钮：朱砂红 + 墨色二级 */
   .btn { border:none; color:#fff; border-radius:22px; cursor:pointer; font-family:inherit; }
-  .btn-go { display:block; width:100%; background:linear-gradient(90deg,#e24b4a,#d4537e); font-size:15px; font-weight:700; padding:11px 0; margin-top:10px; }
+  .btn-go { display:block; width:100%; background:linear-gradient(90deg,#c0392b,#8e2820);
+            font-size:15px; font-weight:700; padding:11px 0; margin-top:10px;
+            box-shadow:0 2px 8px rgba(142,40,32,0.28); }
   .btn-go:active { transform:scale(0.98); }
-  .hint { font-size:10px; color:#8878b0; text-align:center; margin-top:6px; line-height:1.5; }
+  .hint { font-size:10px; color:#3a3024; text-align:center; margin-top:6px; line-height:1.5; }
 
-  .mask { position:fixed; inset:0; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; z-index:200; padding:16px; }
-  .card { background:#241338; border:2px solid #7f77dd; border-radius:16px; padding:18px 16px; width:100%; max-width:380px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; }
+  /* 弹窗：宣纸底 + 墨边（去掉紫色），毛玻璃遮罩 */
+  .mask { position:fixed; inset:0; background:rgba(45,40,32,0.55);
+          backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+          display:flex; align-items:center; justify-content:center; z-index:200; padding:16px; }
+  .card { background:#f4ecd8; border:1px solid rgba(58,48,36,0.4);
+          border-radius:12px; padding:18px 16px; width:100%; max-width:380px;
+          max-height:92vh; display:flex; flex-direction:column; overflow:hidden;
+          box-shadow:0 8px 32px rgba(45,40,32,0.4); color:#2d2820; }
   .roster-scroll { flex:1; min-height:0; overflow-y:auto; margin:8px -4px 0; padding:0 4px; }
-  .drag-ghost { position:fixed; width:58px; height:58px; pointer-events:none; z-index:600; transform:translate(-50%,-62%); opacity:0.92; filter:drop-shadow(0 3px 6px rgba(0,0,0,0.5)); }
+  .drag-ghost { position:fixed; width:58px; height:58px; pointer-events:none; z-index:600; transform:translate(-50%,-62%); opacity:0.92; filter:drop-shadow(0 3px 6px rgba(45,40,32,0.5)); }
   .drag-ghost img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; }
   .pc, .shop-card { touch-action:none; }
   .sell-zone { display:none; flex-direction:column; align-items:center; justify-content:center; gap:3px;
-    min-height:74px; border:2px dashed #ff6b6b; border-radius:12px; background:rgba(226,75,74,0.12);
-    color:#ff9a9a; font-size:13px; font-weight:500; text-align:center; }
-  .sell-zone.sell-hover { background:rgba(226,75,74,0.32); border-color:#ff3b3b; color:#fff; transform:scale(1.02); }
+    min-height:74px; border:2px dashed #c0392b; border-radius:12px; background:rgba(192,57,43,0.14);
+    color:#8e2820; font-size:13px; font-weight:500; text-align:center; }
+  .sell-zone.sell-hover { background:rgba(192,57,43,0.32); border-color:#8e2820; color:#5a1c18; transform:scale(1.02); }
   .sell-zone .sz-ico { font-size:22px; }
-  .card h2 { font-size:16px; font-weight:600; text-align:center; margin-bottom:3px; }
-  .card .sub { font-size:11px; color:#b8a9e8; text-align:center; margin-bottom:12px; }
+  .card h2 { font-size:16px; font-weight:700; text-align:center; margin-bottom:3px; color:#1f1a14; }
+  .card .sub { font-size:11px; color:#6b6354; text-align:center; margin-bottom:12px; }
   .roster { display:flex; flex-wrap:wrap; gap:7px; justify-content:center; }
-  .rc { width:74px; background:rgba(255,255,255,0.05); border:2px solid transparent; border-radius:10px; padding:6px 2px;
+  .rc { width:74px; background:rgba(244,236,216,0.9); border:2px solid transparent; border-radius:8px; padding:6px 2px;
         display:flex; flex-direction:column; align-items:center; cursor:pointer; }
-  .rc.sel { border-color:#ffd45e; background:rgba(255,212,94,0.15); }
-  .rc-emoji { font-size:20px; width:32px; height:32px; border-radius:7px; text-align:center; line-height:32px; }
-  .rc-name { font-size:10px; font-weight:600; margin-top:2px; }
-  .rc-cost { font-size:10px; color:#ffe9a8; }
-  .rc-desc { font-size:7px; color:#9a8fc0; text-align:center; line-height:1.25; margin-top:2px; }
-  .btn-confirm { display:block; width:100%; background:linear-gradient(90deg,#7f77dd,#534ab7); font-size:14px; font-weight:600; padding:10px 0; margin-top:14px; }
-  .tier-title { font-size:11px; color:#ffd45e; margin:10px 0 5px; text-align:left; border-top:1px solid rgba(255,212,94,0.2); padding-top:6px; }
+  .rc.sel { border-color:#8a6d3b; background:rgba(184,148,94,0.25); }
+  .rc-emoji { font-size:20px; width:32px; height:32px; border-radius:7px; text-align:center; line-height:30px;
+  border:1px solid rgba(58,48,36,0.3); }
+  .rc-name { font-size:10px; font-weight:700; margin-top:2px; color:#2d2820; }
+  .rc-cost { font-size:10px; color:#8a6d3b; font-weight:600; }
+  .rc-desc { font-size:7px; color:#6b6354; text-align:center; line-height:1.25; margin-top:2px; }
+  .btn-confirm { display:block; width:100%; background:linear-gradient(90deg,#c0392b,#8e2820);
+                 font-size:14px; font-weight:600; padding:10px 0; margin-top:14px;
+                 box-shadow:0 2px 6px rgba(142,40,32,0.25); }
+  .tier-title { font-size:11px; color:#8a6d3b; margin:10px 0 5px; text-align:left;
+                border-top:1px solid rgba(58,48,36,0.2); padding-top:6px; font-weight:700; }
 
-  /* 商店卡片正文（emoji 旁的名字/属性/说明），大屏时横向排布 */
   .sc-body { display:flex; flex-direction:column; align-items:center; gap:1px; min-width:0; }
-  /* 商店卡内不再显示迷你射程网格（拖拽/点选时棋盘会实时高亮射程，此处冗余） */
   .shop .range-grid { display:none; }
 
-  /* ============ 极矮屏兜底：进一步压缩，保证不出滚动条 ============ */
+  /* ============ 极矮屏兜底 ============ */
   @media (max-height:660px){
     .logbar { min-height:0; padding:3px 8px; }
     .mystatus { padding:4px 8px; margin-top:3px; }
@@ -212,11 +250,10 @@
   }
 
   /* ===================== 大屏 / 横屏：三栏布局 =====================
-     左栏=游戏信息(生命/回合/日志/我方状态)，中栏=棋盘(占满高度)，右栏=商店+控制。
-     触发条件：视口够宽且偏横向；手机竖屏 / 窄屏仍走上面的单列布局。 */
+     去掉 .phone 的 max-width:1180px，让大屏铺满整屏，背景水墨图从 body 透出 */
   @media (min-width:820px) and (min-aspect-ratio:4/3){
     body { align-items:center; }
-    .phone { max-width:1180px; padding:14px 20px; gap:12px 18px;
+    .phone { max-width:none; padding:14px 20px; gap:12px 18px;
       grid-template-columns:250px minmax(0,1fr) 310px;
       grid-template-rows:auto auto minmax(0,1fr);
       grid-template-areas:
@@ -230,7 +267,6 @@
     .logbar { min-height:40px; display:flex; align-items:center; justify-content:center; font-size:12px; }
     .mystatus { margin-top:0; flex-direction:column; align-items:stretch; gap:6px; }
     .mystatus .ms-item { flex-direction:row; justify-content:space-between; }
-    /* 商店：纵向列表，卡片改横向（emoji 居左，正文居右） */
     .shop { flex-direction:column; flex-wrap:nowrap; gap:8px; overflow:hidden; }
     .shop-card { flex-direction:row; width:100%; min-width:0; align-items:center;
       gap:12px; padding:8px 12px; }
@@ -240,7 +276,6 @@
     .shop-card .sc-emoji { flex:0 0 auto; width:36px; height:36px; line-height:36px; font-size:24px; }
     .btn-go { margin-top:0; }
     .legend { margin-top:8px; }
-    /* 选阵容 / 结算弹窗大屏放宽，英雄卡多列平铺 */
     .card { max-width:900px; }
     .roster { gap:9px; }
     .rc { width:90px; }
