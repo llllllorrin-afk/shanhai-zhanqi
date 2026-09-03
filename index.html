@@ -686,7 +686,7 @@ function render(){
     </div>`;
     h+=`</div>`;
   }
-  if(S.phase==='battle') h+=`<div class="area-ctrl"><div class="hint" style="font-size:12px;color:#ffd45e">⚔️ 推进 & 战斗演算中…</div></div>`;
+  if(S.phase==='battle') h+=`<div class="area-ctrl"><div class="hint" style="font-size:12px;color:#8a6d3b">⚔️ 推进 & 战斗演算中…</div></div>`;
 
   // 自定义确认弹窗（覆盖在最上层）
   if(dialog){
@@ -749,7 +749,7 @@ function renderOver(app){
   const ep=expProgress(xp);
   const d=document.createElement('div');
   d.innerHTML=`<div class="mask"><div class="card">
-    <h2 style="color:${win?'#ffd45e':'#ff8a8a'};font-size:20px">${win?'🏆 胜利！':'💀 失败'}</h2>
+    <h2 style="color:${win?'#c0392b':'#8e2820'};font-size:20px">${win?'🏆 胜利！':'💀 失败'}</h2>
     <div class="sub">${win?'你攻破了敌方大本营':'你的大本营被攻破'} · 坚持到第 ${S.round} 回合</div>
     <div class="expbar-wrap">
       <span class="lv-badge">Lv ${ep.lv}</span>
