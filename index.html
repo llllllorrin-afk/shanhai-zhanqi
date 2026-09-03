@@ -96,8 +96,10 @@
     font-size:10px; padding:3px 8px; cursor:pointer; font-family:inherit; white-space:nowrap; font-weight:500; }
   .quit-btn:hover { background:rgba(192,57,43,0.15); }
   .btn-row { display:flex; gap:8px; margin-top:14px; }
-  .btn-random { flex:1; background:rgba(244,236,216,0.85); color:#2d2820;
-    border:1px solid rgba(58,48,36,0.4); font-size:14px; font-weight:600; padding:10px 0; }
+  .btn-random { flex:1; background:linear-gradient(135deg,#3a3024,#1f1a14); color:#f4ecd8;
+    border:1px solid rgba(58,48,36,0.6); font-size:14px; font-weight:700; padding:10px 0;
+    box-shadow:0 2px 6px rgba(31,26,20,0.3); }
+  .btn-random:active { transform:scale(0.98); }
   .btn-row .btn-confirm { flex:1; margin-top:0; }
   .ms-sub { font-size:8px; color:#6b6354; margin-top:1px; }
 
@@ -151,6 +153,27 @@
   .anim-hurt { animation: hurtShake 0.34s; }
   .anim-die { animation: dieFade 0.4s forwards; }
 
+  /* 开战动画：朱砂墨晕从中心扩散 + "开战"文字 */
+  .battle-start-overlay { position:fixed; inset:0; z-index:500; pointer-events:none;
+    display:flex; align-items:center; justify-content:center; }
+  .ink-circle { width:0; height:0; border-radius:50%;
+    background:radial-gradient(circle, rgba(192,57,43,0.9) 0%, rgba(142,40,32,0.5) 35%, transparent 65%);
+    animation: inkSplash 0.7s ease-out forwards; }
+  @keyframes inkSplash {
+    0% { width:0; height:0; opacity:1; }
+    50% { width:100vmax; height:100vmax; opacity:1; }
+    100% { width:140vmax; height:140vmax; opacity:0; }
+  }
+  .start-text { position:absolute; font-size:32px; font-weight:700; color:#f4ecd8;
+    letter-spacing:8px; text-shadow:0 2px 12px rgba(0,0,0,0.7), 0 0 20px rgba(192,57,43,0.5);
+    animation: startTextPop 0.7s ease-out forwards; }
+  @keyframes startTextPop {
+    0% { transform:scale(0.3); opacity:0; }
+    25% { transform:scale(1.3); opacity:1; }
+    60% { transform:scale(1); opacity:1; }
+    100% { transform:scale(1.15); opacity:0; }
+  }
+
   /* 飘字 */
   .float { position:absolute; font-size:15px; font-weight:700; pointer-events:none; z-index:20;
            text-shadow:0 1px 3px rgba(0,0,0,0.6); animation: floatUp 1s ease-out forwards; }
@@ -175,23 +198,44 @@
   /* 商店 */
   .shop-title { font-size:10px; color:#3a3024; margin:8px 0 4px;
   display:flex; justify-content:space-between; align-items:center; font-weight:600; }
-  .shop { display:flex; gap:5px; flex-wrap:wrap; }
-  .shop-card { flex:1; min-width:62px; background:rgba(244,236,216,0.72); border:2px solid;
-               border-radius:8px; padding:5px 2px;
+  /* 商店：移动端紧凑模式——只显示头像+价格，点击弹详情面板 */
+  .shop { display:flex; gap:4px; flex-wrap:nowrap; justify-content:space-between; }
+  .shop-card { flex:1; min-width:0; background:rgba(244,236,216,0.72); border:2px solid;
+               border-radius:8px; padding:4px 2px;
                display:flex; flex-direction:column; align-items:center; cursor:grab; position:relative;
                backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
   .shop-card:active { cursor:grabbing; }
   .shop-card.disabled { opacity:0.35; cursor:not-allowed; }
   .shop-card.locked { opacity:0.4; filter:grayscale(0.8); }
   .shop-card.dragging { opacity:0.35; }
-  .sc-emoji { font-size:20px; width:30px; height:30px; border-radius:7px;
-  text-align:center; line-height:30px; border:1px solid rgba(58,48,36,0.3); }
-  .sc-name { font-size:9px; color:#2d2820; margin-top:2px; font-weight:600; }
-  .sc-cost { font-size:11px; color:#8a6d3b; font-weight:600; }
+  .sc-emoji { font-size:20px; width:100%; max-width:38px; aspect-ratio:1; border-radius:7px;
+  text-align:center; line-height:1; border:1px solid rgba(58,48,36,0.3);
+  display:flex; align-items:center; justify-content:center; }
+  .sc-name { display:none; }
+  .sc-cost { font-size:11px; color:#8a6d3b; font-weight:700; }
   .sc-meta { font-size:7px; color:#6b6354; }
   .sc-lock { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
              background:rgba(0,0,0,0.45); border-radius:7px; font-size:9px; color:#b8945e; }
-  .sc-tip { font-size:8px; color:#6b6354; margin-top:1px; }
+  .sc-tip { display:none; }
+  .sc-body { display:none; }
+
+  /* 商店详情面板（点击商店卡片弹出） */
+  .shop-detail { position:fixed; inset:0; z-index:250; background:rgba(45,40,32,0.55);
+    backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+    display:flex; align-items:center; justify-content:center; padding:16px; }
+  .shop-detail-card { background:#f4ecd8; border:1px solid rgba(58,48,36,0.4);
+    border-radius:12px; padding:16px; width:100%; max-width:300px;
+    box-shadow:0 8px 32px rgba(45,40,32,0.4); color:#2d2820; }
+  .sd-head { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .sd-emoji { width:56px; height:56px; border-radius:10px; border:1px solid rgba(58,48,36,0.3);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .sd-emoji img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; }
+  .sd-title { flex:1; }
+  .sd-name { font-size:17px; font-weight:700; color:#1f1a14; }
+  .sd-cost { font-size:13px; color:#8a6d3b; font-weight:600; }
+  .sd-desc { font-size:12px; color:#3a3024; margin:8px 0; line-height:1.5; }
+  .sd-myth { font-size:10px; color:#6b6354; margin-bottom:12px; font-style:italic; }
+  .sd-locked { text-align:center; color:#8e2820; font-weight:600; padding:10px; background:rgba(192,57,43,0.12); border-radius:8px; }
 
   /* 按钮：朱砂红 + 墨色二级 */
   .btn { border:none; color:#fff; border-radius:22px; cursor:pointer; font-family:inherit; }
@@ -270,10 +314,11 @@
     .shop { flex-direction:column; flex-wrap:nowrap; gap:8px; overflow:hidden; }
     .shop-card { flex-direction:row; width:100%; min-width:0; align-items:center;
       gap:12px; padding:8px 12px; }
-    .shop-card .sc-body { align-items:flex-start; gap:2px; flex:1; }
-    .shop-card .sc-name { font-size:13px; }
+    .shop-card .sc-body { display:flex; align-items:flex-start; gap:2px; flex:1; }
+    .shop-card .sc-name { display:block; font-size:13px; }
     .shop-card .attr-row { justify-content:flex-start; margin-top:2px; }
-    .shop-card .sc-emoji { flex:0 0 auto; width:36px; height:36px; line-height:36px; font-size:24px; }
+    .shop-card .sc-emoji { flex:0 0 auto; width:36px; height:36px; line-height:36px; font-size:24px; max-width:none; }
+    .shop-card .sc-tip { display:block; }
     .btn-go { margin-top:0; }
     .legend { margin-top:8px; }
     .card { max-width:900px; }
@@ -422,7 +467,7 @@ function aiTurn(state,rng){
 }
 
 // ================= 状态 =================
-let S={}, drag=null, floats=[], hoverCell=null, selectedUid='', showRange=true, dialog=null, xp=loadXp();
+let S={}, drag=null, floats=[], hoverCell=null, selectedUid='', showRange=true, dialog=null, shopDetailId=null, xp=loadXp();
 function initGame(){
   S={ phase:'select', roster:[], units:[], playerGold:0, enemyGold:START_GOLD,
       playerLife:START_LIFE, enemyLife:START_LIFE, round:0, shop:[], enemyRoster:[],
@@ -456,6 +501,15 @@ function dialogOk(){ if(dialog&&dialog.onOk) dialog.onOk(); }
 function toggleRange(){ showRange=!showRange; S.log=showRange?'已开启射程常驻显示':'已关闭射程常驻显示'; render(); }
 function confirmRoster(){
   if(S.roster.length!==5) return;
+  // 播放开战动画：朱砂墨晕从中心扩散 + "开战"文字，动画到一半时切换到备战界面
+  const ov=document.createElement('div');
+  ov.className='battle-start-overlay';
+  ov.innerHTML='<div class="ink-circle"></div><div class="start-text">开 战</div>';
+  document.body.appendChild(ov);
+  setTimeout(function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); },720);
+  setTimeout(doConfirmRoster,360);
+}
+function doConfirmRoster(){
   // 敌方阵容从「已解锁」池随机，保证双方强度对等
   const lvl=levelOfXp(xp);
   S.enemyRoster=randomRoster(lvl,5,Math.random);
@@ -700,6 +754,24 @@ function render(){
         </div>
       </div></div>`;
   }
+  // 商店详情面板（点击商店卡片弹出，移动端紧凑模式下用）
+  if(shopDetailId){
+    const u=UNIT_MAP[shopDetailId];
+    const sv=S.shop.find(x=>x.id===shopDetailId);
+    if(u&&sv){
+      const dis=S.playerGold<u.cost||sv.locked;
+      h+=`<div class="shop-detail" onclick="closeShopDetail()"><div class="shop-detail-card" onclick="event.stopPropagation()">
+        <div class="sd-head">
+          <div class="sd-emoji" style="background:${u.color}"><img class="sprite" src="assets/${u.id}.png" alt="${u.name}" draggable="false" onerror="this.parentNode.textContent='${u.emoji}'"></div>
+          <div class="sd-title"><div class="sd-name">${u.name}</div><div class="sd-cost">💰 ${u.cost} 金币</div></div>
+        </div>
+        ${attrRow(u)}
+        <div class="sd-desc">${u.desc}（${u.role}）</div>
+        <div class="sd-myth">典故：${u.myth}</div>
+        ${sv.locked?`<div class="sd-locked">🔒 需 Lv${sv.unlock} 解锁</div>`:`<button class="btn btn-confirm" onclick="placeFromDetail('${u.id}')" ${dis?'disabled style="opacity:0.5"':''}>${dis?'金币不足':'上阵 →'}</button>`}
+      </div></div>`;
+    }
+  }
   app.innerHTML=h;
 
   if(S.phase==='over') renderOver(app);
@@ -787,6 +859,10 @@ function quickPlace(id){
   }
   toast('备战排已满');
 }
+// 商店详情面板：点击商店卡片弹出（移动端紧凑模式下的详情入口）
+function openShopDetail(id){ shopDetailId=id; render(); }
+function closeShopDetail(){ shopDetailId=null; render(); }
+function placeFromDetail(id){ shopDetailId=null; quickPlace(id); }
 
 // ===== 拖拽（Pointer Events：同时兼容鼠标与手机触屏，替代 HTML5 drag-drop）=====
 // 格子是否被任意存活单位占据
@@ -829,7 +905,7 @@ function onDragPointerUp(e){
   if(!pending||e.pointerId!==pending.pid) return;
   const d=pending; pending=null;
   if(!d.moved){ // 未移动 → 视为点击
-    if(d.type==='shop') quickPlace(d.id);
+    if(d.type==='shop') openShopDetail(d.id);
     else if(d.type==='piece') onTapPiece(d.uid);
     return;
   }
