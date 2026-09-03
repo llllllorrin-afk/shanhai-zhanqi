@@ -140,6 +140,12 @@
   .lp { width:5px; height:5px; border-radius:50%; background:#c0392b; }
   .lp.empty { background:rgba(58,48,36,0.25); }
   .lp.hurt { background:#b8945e; }
+  /* 棋子框右上角金币角标：显示该棋子花费 */
+  .pc-cost { position:absolute; top:2px; right:2px; z-index:5;
+    background:rgba(31,26,20,0.82); color:#f4ecd8; font-size:9px; font-weight:700;
+    padding:1px 4px; border-radius:8px; line-height:1.2;
+    backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+    border:1px solid rgba(244,236,216,0.25); white-space:nowrap; }
 
   /* 动画：登场 / 前进 / 攻击 / 受击 */
   @keyframes enterPop { 0%{transform:scale(0.2) rotate(-25deg);opacity:0;} 60%{transform:scale(1.25) rotate(6deg);opacity:1;} 100%{transform:scale(1) rotate(0);opacity:1;} }
@@ -691,7 +697,7 @@ function render(){
       if(u){
         let dots=''; for(let i=0;i<u.maxLives;i++) dots+=`<span class="lp ${i<u.lives?'':'empty'}"></span>`;
         h+=`<div class="pc ${u.side} ${u.anim?'anim-'+u.anim:''} ${selectedUid===u.uid?'sel':''}" data-uid="${u.uid}">
-          <div class="pc-emoji"><img class="sprite" src="assets/${u.id}.png" alt="${u.name}" draggable="false" onerror="this.parentNode.textContent='${u.emoji}'"></div><div class="pc-name">${u.name}</div><div class="lives-row">${dots}</div>
+          <div class="pc-cost">ð°${u.cost}</div><div class="pc-emoji"><img class="sprite" src="assets/${u.id}.png" alt="${u.name}" draggable="false" onerror="this.parentNode.textContent='${u.emoji}'"></div><div class="pc-name">${u.name}</div><div class="lives-row">${dots}</div>
         </div>`;
       }
       fl.forEach(f=>{ h+=`<div class="float ${f.cls}">${f.text}</div>`; });
