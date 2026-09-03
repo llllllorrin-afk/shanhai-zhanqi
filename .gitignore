@@ -1,0 +1,6 @@
+pixelate.py
+check_bg.py
+remove_bg.py
+montage.py
+__pycache__/
+*.pyc

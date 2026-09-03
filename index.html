@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="ufhJdLxK4VA356dkoEgWcg">
+<head data-page-node-id="dBhADmXAJFOKshFzGMz9Ko">
+<meta charset="UTF-8" data-page-node-id="tPcRXPfsDV2J33grhaaVe2">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" data-page-node-id="5ejuJrv9morl8G2b6m3ey1">
+<title>山海战棋 · 中国神话推进战棋</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
+  html,body { height:100%; overflow:hidden; }
+  body { background:#12091f; color:#f2ecff; font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;
+    display:flex; justify-content:center; align-items:stretch; }
+
+  /* ===== 布局骨架：整屏无滚动，Grid 分区 =====
+     移动端（默认）单列纵向：信息 / 日志 / 棋盘(1fr) / 状态 / 商店 / 控制
+     大屏见底部媒体查询：三栏（左信息 / 中棋盘 / 右商店） */
+  .phone { width:100%; max-width:460px; height:100vh; height:100dvh; padding:6px 10px;
+    position:relative; display:grid; gap:4px; overflow:hidden;
+    grid-template-columns:1fr;
+    grid-template-rows:auto auto minmax(0,1fr) auto auto auto;
+    grid-template-areas:"top" "log" "board" "status" "shop" "ctrl"; }
+
+  .area-top    { grid-area:top; }
+  .area-log    { grid-area:log; }
+  .area-board  { grid-area:board; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+  .area-status { grid-area:status; }
+  .area-shop   { grid-area:shop; min-height:0; }
+  .area-ctrl   { grid-area:ctrl; }
+
+  /* 棋盘居中容器：吸收剩余高度，棋盘在其中等比 contain */
+  .board-wrap { flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; }
+
+  .topbar { display:flex; justify-content:space-between; align-items:center; padding:4px 6px; margin-bottom:4px; }
+  .life-box { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .life-side { font-size:9px; color:#b8a9e8; }
+  .lives { display:flex; gap:2px; align-items:center; font-size:13px; }
+  .lives .hp { font-size:13px; line-height:1; }
+  .lives .hp.off { opacity:0.28; filter:grayscale(1); }
+  .round-chip { font-size:12px; color:#ffd45e; background:rgba(255,212,94,0.12); border-radius:12px; padding:3px 10px; }
+
+  /* 经验条（账号等级） */
+  .expbar-wrap { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,212,94,0.25); border-radius:10px; padding:7px 10px; margin-bottom:10px; }
+  .lv-badge { background:linear-gradient(135deg,#7f77dd,#534ab7); color:#fff; font-size:11px; font-weight:700;
+    border-radius:8px; padding:3px 9px; white-space:nowrap; }
+  .exp-track { flex:1; height:8px; background:rgba(255,255,255,0.1); border-radius:5px; overflow:hidden; }
+  .exp-fill { height:100%; background:linear-gradient(90deg,#ffd45e,#FAC775); border-radius:5px; transition:width 0.4s; }
+  .exp-num { font-size:10px; color:#ffd45e; white-space:nowrap; }
+
+  /* 英雄属性可视化 */
+  .attr-row { display:flex; gap:5px; justify-content:center; margin-top:3px; flex-wrap:wrap; }
+  .attr { display:flex; align-items:center; gap:2px; background:rgba(255,255,255,0.07);
+    border-radius:5px; padding:1px 4px; font-size:9px; color:#e8dcff; }
+  .attr .ico { font-size:10px; }
+  .attr.hp { background:rgba(75,224,75,0.14); }
+  .attr.gold { background:rgba(255,233,168,0.16); }
+  .attr.rng { background:rgba(133,183,235,0.16); }
+  .attr.tgt { background:rgba(226,75,74,0.16); }
+  .attr.heal { background:rgba(107,255,154,0.16); }
+  /* 迷你射程网格：以英雄为中心 5x5，高亮可达格 */
+  .range-grid { display:grid; grid-template-columns:repeat(5,7px); gap:1px; margin-top:4px; }
+  .rg { width:7px; height:7px; border-radius:1px; background:rgba(255,255,255,0.09); }
+  .rg.in { background:#85B7EB; }
+  .rg.self { background:#ffd45e; }
+
+  /* 拖拽时棋盘射程高亮 */
+  .cell.inrange { box-shadow:inset 0 0 0 2px rgba(255,212,94,0.6); }
+  .cell.range-src { background:rgba(255,212,94,0.3) !important; box-shadow:inset 0 0 0 2px #ffd45e; }
+  .cell.droppable.inrange { background:rgba(107,255,154,0.1) !important; }
+  .cell.bad { box-shadow:inset 0 0 0 2px rgba(226,75,74,0.6); }
+  .pc.sel { box-shadow:0 0 0 2px #ffd45e, 0 0 12px rgba(255,212,94,0.6); }
+  /* 常驻射程（淡金）：己方棋子能打到的范围，一直可见 */
+  .cell.dimrange { background:rgba(255,212,94,0.07) !important; box-shadow:inset 0 0 0 1px rgba(255,212,94,0.22); }
+  /* 可放置空格（绿框）：拖拽时提示己方 4 排所有空格都能放 */
+  .cell.droppable { background:rgba(107,255,154,0.07) !important; box-shadow:inset 0 0 0 2px rgba(107,255,154,0.45); }
+  .legend { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; font-size:9px; color:#9a8fc0; margin-top:6px; }
+  .legend span { display:flex; align-items:center; gap:3px; }
+  .sw { width:10px; height:10px; border-radius:2px; display:inline-block; }
+  .sw.g { background:rgba(107,255,154,0.35); } .sw.y { background:rgba(255,212,94,0.3); } .sw.r { background:rgba(226,75,74,0.5); }
+
+  .quit-btn { background:rgba(226,75,74,0.18); color:#ff9a9a; border:1px solid rgba(226,75,74,0.4);
+    border-radius:8px; font-size:10px; padding:3px 8px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .quit-btn:hover { background:rgba(226,75,74,0.3); }
+  .btn-row { display:flex; gap:8px; margin-top:14px; }
+  .btn-random { flex:1; background:rgba(255,255,255,0.08); color:#e8dcff; border:1px solid rgba(255,212,94,0.35);
+    font-size:14px; font-weight:600; padding:10px 0; }
+  .btn-row .btn-confirm { flex:1; margin-top:0; }
+  .ms-sub { font-size:8px; color:#8878b0; margin-top:1px; }
+
+  .rc.locked { opacity:0.4; filter:grayscale(0.85); cursor:not-allowed; position:relative; }
+  .rc-lock { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; background:rgba(0,0,0,0.5); border-radius:10px; gap:1px; }
+  .rc-lock .lk { font-size:14px; }
+  .rc-lock .lt { font-size:8px; color:#ffd45e; }
+  .logbar { font-size:11px; color:#c9bdf0; background:rgba(255,255,255,0.04); border-radius:8px; padding:5px 8px; margin-bottom:4px; min-height:15px; text-align:center; }
+
+  .base-label { text-align:center; font-size:10px; padding:2px 0; border-radius:5px; margin:1px 0; }
+  .base-enemy { background:rgba(226,75,74,0.16); color:#ff9a9a; }
+  .base-player { background:rgba(75,163,255,0.16); color:#9cccff; }
+
+  /* 棋盘：整体保持 4:8 比例，在 board-wrap 内 contain 等比缩放，永不溢出 */
+  .board { aspect-ratio:4 / 8; max-width:100%; max-height:100%; width:auto; height:100%;
+    display:flex; flex-direction:column; gap:2px; position:relative; }
+  .brow { display:flex; gap:2px; align-items:stretch; position:relative; flex:1; min-height:0; }
+  .cell { flex:1; min-width:0; border-radius:6px; display:flex; align-items:center; justify-content:center; position:relative; }
+  .cell.ez { background:rgba(226,75,74,0.05); border:1px dashed rgba(226,75,74,0.22); }
+  .cell.pz { background:rgba(75,163,255,0.05); border:1px dashed rgba(75,163,255,0.22); }
+  .cell.bz { background:rgba(255,212,94,0.07); border:1px dashed rgba(255,212,94,0.38); }
+  .cell.dragover { background:rgba(255,212,94,0.25); border:2px solid #ffd45e; }
+
+  .pc { width:90%; height:90%; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+        position:relative; background:rgba(255,255,255,0.04); }
+  .pc.player { border:2px solid #4bd0ff; }
+  .pc.enemy { border:2px solid #ff6b6b; }
+  .pc-emoji { flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; font-size:21px; line-height:1; }
+  .sprite { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; image-rendering:pixelated; pointer-events:none; }
+  .pc-name { font-size:8px; color:#dcd0ff; margin-top:1px; }
+  .lives-row { display:flex; gap:2px; margin-top:2px; }
+  .lp { width:5px; height:5px; border-radius:50%; background:#4be04b; }
+  .lp.empty { background:rgba(255,255,255,0.2); }
+  .lp.hurt { background:#e2b04b; }
+
+  /* 动画：登场 / 前进 / 攻击 / 受击 */
+  @keyframes enterPop { 0%{transform:scale(0.2) rotate(-25deg);opacity:0;} 60%{transform:scale(1.25) rotate(6deg);opacity:1;} 100%{transform:scale(1) rotate(0);opacity:1;} }
+  @keyframes advanceMove { 0%{transform:translateY(var(--ay,0)) scale(1);} 45%{transform:translateY(0) scale(1.12);} 100%{transform:translateY(0) scale(1);} }
+  @keyframes attackPush { 0%{transform:scale(1);} 35%{transform:scale(1.22);} 100%{transform:scale(1);} }
+  @keyframes hurtShake { 0%{transform:translateX(0);} 25%{transform:translateX(-5px);} 50%{transform:translateX(5px);} 75%{transform:translateX(-3px);} 100%{transform:translateX(0);} }
+  @keyframes dieFade { 0%{transform:scale(1);opacity:1;} 100%{transform:scale(0.3) rotate(25deg);opacity:0;} }
+  .anim-enter { animation: enterPop 0.42s ease-out; }
+  .anim-advance { animation: advanceMove 0.34s ease-out; }
+  .anim-attack { animation: attackPush 0.3s ease-out; }
+  .anim-hurt { animation: hurtShake 0.34s; }
+  .anim-die { animation: dieFade 0.4s forwards; }
+
+  /* 飘字 */
+  .float { position:absolute; font-size:15px; font-weight:700; pointer-events:none; z-index:20;
+           text-shadow:0 1px 3px rgba(0,0,0,0.9); animation: floatUp 1s ease-out forwards; }
+  .float.dmg { color:#ff6b6b; } .float.heal { color:#6bff9a; } .float.revive { color:#ffd45e; font-size:12px; }
+  @keyframes floatUp { 0%{transform:translateY(0) scale(0.7);opacity:0;} 22%{transform:translateY(-10px) scale(1.15);opacity:1;} 100%{transform:translateY(-34px) scale(1);opacity:0;} }
+
+  .slide-btn { position:absolute; z-index:6; background:rgba(75,163,255,0.9); color:#fff; border:none; border-radius:6px;
+               font-size:13px; width:20px; height:20px; line-height:20px; cursor:pointer; }
+  .slide-btn.left { left:-9px; } .slide-btn.right { right:-9px; }
+
+  /* 我方信息条（棋盘下方） */
+  .mystatus { display:flex; justify-content:space-around; align-items:center; margin-top:6px;
+              background:rgba(75,163,255,0.08); border:1px solid rgba(75,163,255,0.2); border-radius:10px; padding:7px 10px; }
+  .ms-item { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .ms-label { font-size:9px; color:#9cccff; }
+  .ms-val { font-size:16px; font-weight:700; color:#ffe9a8; }
+  .ms-val.small { font-size:13px; }
+
+  /* 商店 */
+  .shop-title { font-size:10px; color:#b8a9e8; margin:8px 0 4px; display:flex; justify-content:space-between; align-items:center; }
+  .shop { display:flex; gap:5px; flex-wrap:wrap; }
+  .shop-card { flex:1; min-width:62px; background:rgba(255,255,255,0.05); border:2px solid; border-radius:9px; padding:5px 2px;
+               display:flex; flex-direction:column; align-items:center; cursor:grab; position:relative; }
+  .shop-card:active { cursor:grabbing; }
+  .shop-card.disabled { opacity:0.35; cursor:not-allowed; }
+  .shop-card.locked { opacity:0.4; filter:grayscale(0.8); }
+  .shop-card.dragging { opacity:0.35; }
+  .sc-emoji { font-size:20px; width:30px; height:30px; border-radius:7px; text-align:center; line-height:30px; }
+  .sc-name { font-size:9px; color:#fff; margin-top:2px; }
+  .sc-cost { font-size:11px; color:#ffe9a8; font-weight:600; }
+  .sc-meta { font-size:7px; color:#9a8fc0; }
+  .sc-lock { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+             background:rgba(0,0,0,0.45); border-radius:7px; font-size:9px; color:#ffd45e; }
+  .sc-tip { font-size:8px; color:#8878b0; margin-top:1px; }
+
+  .btn { border:none; color:#fff; border-radius:22px; cursor:pointer; font-family:inherit; }
+  .btn-go { display:block; width:100%; background:linear-gradient(90deg,#e24b4a,#d4537e); font-size:15px; font-weight:700; padding:11px 0; margin-top:10px; }
+  .btn-go:active { transform:scale(0.98); }
+  .hint { font-size:10px; color:#8878b0; text-align:center; margin-top:6px; line-height:1.5; }
+
+  .mask { position:fixed; inset:0; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; z-index:200; padding:16px; }
+  .card { background:#241338; border:2px solid #7f77dd; border-radius:16px; padding:18px 16px; width:100%; max-width:380px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; }
+  .roster-scroll { flex:1; min-height:0; overflow-y:auto; margin:8px -4px 0; padding:0 4px; }
+  .drag-ghost { position:fixed; width:58px; height:58px; pointer-events:none; z-index:600; transform:translate(-50%,-62%); opacity:0.92; filter:drop-shadow(0 3px 6px rgba(0,0,0,0.5)); }
+  .drag-ghost img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; }
+  .pc, .shop-card { touch-action:none; }
+  .sell-zone { display:none; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    min-height:74px; border:2px dashed #ff6b6b; border-radius:12px; background:rgba(226,75,74,0.12);
+    color:#ff9a9a; font-size:13px; font-weight:500; text-align:center; }
+  .sell-zone.sell-hover { background:rgba(226,75,74,0.32); border-color:#ff3b3b; color:#fff; transform:scale(1.02); }
+  .sell-zone .sz-ico { font-size:22px; }
+  .card h2 { font-size:16px; font-weight:600; text-align:center; margin-bottom:3px; }
+  .card .sub { font-size:11px; color:#b8a9e8; text-align:center; margin-bottom:12px; }
+  .roster { display:flex; flex-wrap:wrap; gap:7px; justify-content:center; }
+  .rc { width:74px; background:rgba(255,255,255,0.05); border:2px solid transparent; border-radius:10px; padding:6px 2px;
+        display:flex; flex-direction:column; align-items:center; cursor:pointer; }
+  .rc.sel { border-color:#ffd45e; background:rgba(255,212,94,0.15); }
+  .rc-emoji { font-size:20px; width:32px; height:32px; border-radius:7px; text-align:center; line-height:32px; }
+  .rc-name { font-size:10px; font-weight:600; margin-top:2px; }
+  .rc-cost { font-size:10px; color:#ffe9a8; }
+  .rc-desc { font-size:7px; color:#9a8fc0; text-align:center; line-height:1.25; margin-top:2px; }
+  .btn-confirm { display:block; width:100%; background:linear-gradient(90deg,#7f77dd,#534ab7); font-size:14px; font-weight:600; padding:10px 0; margin-top:14px; }
+  .tier-title { font-size:11px; color:#ffd45e; margin:10px 0 5px; text-align:left; border-top:1px solid rgba(255,212,94,0.2); padding-top:6px; }
+
+  /* 商店卡片正文（emoji 旁的名字/属性/说明），大屏时横向排布 */
+  .sc-body { display:flex; flex-direction:column; align-items:center; gap:1px; min-width:0; }
+  /* 商店卡内不再显示迷你射程网格（拖拽/点选时棋盘会实时高亮射程，此处冗余） */
+  .shop .range-grid { display:none; }
+
+  /* ============ 极矮屏兜底：进一步压缩，保证不出滚动条 ============ */
+  @media (max-height:660px){
+    .logbar { min-height:0; padding:3px 8px; }
+    .mystatus { padding:4px 8px; margin-top:3px; }
+    .ms-val { font-size:14px; }
+    .shop-card { padding:3px 2px; }
+    .attr-row { gap:3px; }
+    .hint { margin-top:3px; }
+    .legend { margin-top:3px; }
+  }
+
+  /* ===================== 大屏 / 横屏：三栏布局 =====================
+     左栏=游戏信息(生命/回合/日志/我方状态)，中栏=棋盘(占满高度)，右栏=商店+控制。
+     触发条件：视口够宽且偏横向；手机竖屏 / 窄屏仍走上面的单列布局。 */
+  @media (min-width:820px) and (min-aspect-ratio:4/3){
+    body { align-items:center; }
+    .phone { max-width:1180px; padding:14px 20px; gap:12px 18px;
+      grid-template-columns:250px minmax(0,1fr) 310px;
+      grid-template-rows:auto auto minmax(0,1fr);
+      grid-template-areas:
+        "top    board  shop"
+        "log    board  shop"
+        "status board  ctrl"; }
+    .area-status { align-self:start; }
+    .area-shop { display:flex; flex-direction:column; min-height:0; }
+    .area-ctrl { align-self:end; }
+    .topbar { flex-wrap:wrap; gap:8px; }
+    .logbar { min-height:40px; display:flex; align-items:center; justify-content:center; font-size:12px; }
+    .mystatus { margin-top:0; flex-direction:column; align-items:stretch; gap:6px; }
+    .mystatus .ms-item { flex-direction:row; justify-content:space-between; }
+    /* 商店：纵向列表，卡片改横向（emoji 居左，正文居右） */
+    .shop { flex-direction:column; flex-wrap:nowrap; gap:8px; overflow:hidden; }
+    .shop-card { flex-direction:row; width:100%; min-width:0; align-items:center;
+      gap:12px; padding:8px 12px; }
+    .shop-card .sc-body { align-items:flex-start; gap:2px; flex:1; }
+    .shop-card .sc-name { font-size:13px; }
+    .shop-card .attr-row { justify-content:flex-start; margin-top:2px; }
+    .shop-card .sc-emoji { flex:0 0 auto; width:36px; height:36px; line-height:36px; font-size:24px; }
+    .btn-go { margin-top:0; }
+    .legend { margin-top:8px; }
+    /* 选阵容 / 结算弹窗大屏放宽，英雄卡多列平铺 */
+    .card { max-width:900px; }
+    .roster { gap:9px; }
+    .rc { width:90px; }
+  }
+</style>
+</head>
+<body data-page-node-id="PA7WKAA4ZigTMDSu3p25Et">
+<div class="phone" id="app" data-page-node-id="VZ7hsUVYyyAY6mPGvGEWrF"></div>
+
+<script>
+// ================= 核心逻辑（与 engine.js / data.js 一致）=================
+const UNITS = [
+  { id:'houyi',name:'后羿',cost:2,lives:1,range:3,targets:2,dmg:1,unlock:1,emoji:'🏹',color:'#639922',role:'远程双射',desc:'同时攻击2个敌人',myth:'后羿射九日' },
+  { id:'juling',name:'巨灵神',cost:1,lives:3,range:1,targets:1,dmg:1,unlock:1,emoji:'🗿',color:'#888780',role:'超肉前排',desc:'3条命肉盾',myth:'华山巨灵神' },
+  { id:'jinchan',name:'金蟾',cost:3,lives:2,range:1,targets:3,dmg:1,unlock:1,emoji:'🐸',color:'#EF9F27',role:'产金输出',gold:1,desc:'每回合+1金币',myth:'刘海戏金蟾' },
+  { id:'huode',name:'火德星君',cost:2,lives:1,range:2,targets:1,dmg:2,unlock:1,emoji:'🔥',color:'#e24b4a',role:'灼烧爆发',desc:'单目标-2命',myth:'南方火神' },
+  { id:'fengbo',name:'风伯',cost:1,lives:2,range:1,targets:1,dmg:1,unlock:1,emoji:'🌀',color:'#5DCAA5',role:'击退',tags:['knockback'],desc:'登场吹退正前敌人',myth:'风神飞廉' },
+  { id:'leizhen',name:'雷震子',cost:3,lives:2,range:3,targets:2,dmg:1,unlock:2,emoji:'⚡',color:'#FAC775',role:'雷击',tags:['targetMaxLives'],desc:'优先打命最高敌人',myth:'封神榜' },
+  { id:'xuanwu',name:'玄武',cost:4,lives:4,range:1,targets:1,dmg:1,unlock:2,emoji:'🐢',color:'#0F6E56',role:'终极肉盾',desc:'4条命',myth:'四象·北方' },
+  { id:'longwang',name:'龙王',cost:3,lives:2,range:2,targets:3,dmg:1,unlock:2,emoji:'💧',color:'#378add',role:'治疗输出',heal:1,healScope:'back1',desc:'治疗后方友军',myth:'四海龙王' },
+  { id:'jiuwei',name:'九尾狐',cost:2,lives:1,range:2,targets:1,dmg:1,unlock:2,emoji:'🦊',color:'#D85A30',role:'控制',tags:['stun'],desc:'敌人下回合不前进',myth:'涂山狐' },
+  { id:'wukong',name:'孙悟空',cost:4,lives:3,range:1,targets:1,dmg:2,unlock:3,emoji:'🐒',color:'#BA7517',role:'双段爆发',desc:'每击-2命',myth:'西游记' },
+  { id:'change',name:'嫦娥',cost:3,lives:2,range:3,targets:2,dmg:1,unlock:3,emoji:'🌸',color:'#ED93B1',role:'治疗远程',heal:1,healScope:'lowest',desc:'治疗最缺命友军',myth:'嫦娥奔月' },
+  { id:'niumo',name:'牛魔王',cost:5,lives:4,range:1,targets:2,dmg:1,unlock:3,emoji:'🐂',color:'#712B13',role:'前排双打',tags:['knockback'],desc:'撞退敌人',myth:'西游记' },
+  { id:'nezha',name:'哪吒',cost:3,lives:2,range:2,targets:3,dmg:1,unlock:3,emoji:'🪷',color:'#D4537E',role:'范围',desc:'攻击3个敌人',myth:'封神榜' },
+  { id:'erlang',name:'二郎神',cost:5,lives:3,range:4,targets:2,dmg:1,unlock:4,emoji:'🔱',color:'#185FA5',role:'超远程',desc:'射程4双目标',myth:'封神榜' },
+  { id:'baisu',name:'白素贞',cost:4,lives:2,range:3,targets:1,dmg:1,unlock:4,emoji:'❄️',color:'#85B7EB',role:'冰冻控制',tags:['stun'],desc:'冻结敌人1回合',myth:'白蛇传' },
+  { id:'laojun',name:'太上老君',cost:4,lives:2,range:2,targets:1,dmg:1,unlock:4,emoji:'☯️',color:'#7F77DD',role:'团队治疗',heal:1,healScope:'allAlly',desc:'治疗全体友军',myth:'道教' },
+  { id:'dapeng',name:'大鹏',cost:5,lives:3,range:2,targets:3,dmg:1,unlock:4,emoji:'🦅',color:'#534AB7',role:'突进',tags:['dash'],desc:'登场飞到最前排',myth:'大鹏金翅鸟' },
+  { id:'yinglong',name:'应龙',cost:6,lives:5,range:3,targets:3,dmg:2,unlock:5,emoji:'🐉',color:'#1D9E75',role:'范围核心',desc:'范围3目标各-2命',myth:'应龙助禹' },
+  { id:'yudi',name:'玉皇大帝',cost:7,lives:4,range:9,targets:2,dmg:1,unlock:5,emoji:'👑',color:'#FAC775',role:'全场+产金',gold:2,desc:'攻全场2敌+2金',myth:'天庭之主' },
+  { id:'nvwa',name:'女娲',cost:6,lives:3,range:3,targets:2,dmg:1,unlock:5,emoji:'🌟',color:'#F4C0D1',role:'复活',tags:['revive'],desc:'每回合复活1友军',myth:'女娲补天' },
+  { id:'chiyou',name:'蚩尤',cost:7,lives:5,range:1,targets:3,dmg:1,unlock:5,emoji:'⚔️',color:'#791F1F',role:'战神',tags:['rage'],desc:'命越低目标越多',myth:'逐鹿之战' }
+];
+const UNIT_MAP={}; UNITS.forEach(u=>UNIT_MAP[u.id]=u);
+const BOARD_ROWS=8, BOARD_COLS=4, PLAYER_ROWS=4, START_GOLD=5, GOLD_PER_ROUND=1, START_LIFE=3, MAX_LEVEL=5;
+// 经济：利息（每持有 5 金币 +1，上限 5）— 双方同规则
+const INTEREST_PER=5, MAX_INTEREST=5;
+function calcInterest(gold){ return Math.min(MAX_INTEREST, Math.floor(gold/INTEREST_PER)); }
+// 从「已解锁」英雄池随机抽 n 个（保证敌方与玩家强度对等）
+function randomRoster(level,n,r){
+  const pool=UNITS.filter(u=>u.unlock<=level).map(u=>u.id);
+  const arr=pool.slice();
+  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); const t=arr[i];arr[i]=arr[j];arr[j]=t; }
+  return arr.slice(0,Math.min(n,arr.length));
+}
+
+// ===== 经验 / 账号等级（跨对局累积，存本地）=====
+// 累计经验门槛：前期升得快，2 级后逐级拉长
+//   Lv1→2 需 12（约 1 局）
+//   Lv2→3 需 28（累计 40）
+//   Lv3→4 需 50（累计 90）
+//   Lv4→5 需 90（累计 180）
+const EXP_TABLE=[0,12,40,90,180];
+const XP_KEY='shz_xp_v1';
+function loadXp(){ try{ const v=localStorage.getItem(XP_KEY); return v?parseInt(v,10)||0:0; }catch(e){ return 0; } }
+function saveXp(v){ try{ localStorage.setItem(XP_KEY,String(v)); }catch(e){} }
+function levelOfXp(xp){ let lv=1; for(let i=1;i<EXP_TABLE.length;i++){ if(xp>=EXP_TABLE[i]) lv=i+1; } return lv; }
+function expProgress(xp){ const lv=levelOfXp(xp);
+  if(lv>=MAX_LEVEL) return {lv,cur:0,need:0,pct:100,max:true};
+  const cur=xp-EXP_TABLE[lv-1], need=EXP_TABLE[lv]-EXP_TABLE[lv-1];
+  return {lv,cur,need,pct:Math.round(cur/need*100)}; }
+const XP_PER_ROUND=1, XP_WIN=12, XP_LOSE=0; // 每回合+1，胜利+12，失败不获得经验
+let _uid=1; const nextUid=()=>'u'+(_uid++); const rng=Math.random;
+const levelOf = r => Math.min(MAX_LEVEL, Math.max(1,r));
+
+function makeUnit(id,side){ const b=UNIT_MAP[id]; return { uid:nextUid(), id:b.id, side, name:b.name, emoji:b.emoji, color:b.color, role:b.role, cost:b.cost,
+  lives:b.lives, maxLives:b.lives, range:b.range, targets:b.targets, dmg:b.dmg||1, gold:b.gold||0, heal:b.heal||0, healScope:b.healScope||'',
+  tags:b.tags||[], row:-1, col:-1, alive:true, stunned:false, anim:'' }; }
+
+function shopView(rosterIds, level){
+  return rosterIds.map(id=>UNIT_MAP[id]).filter(Boolean).sort((a,b)=>a.cost-b.cost)
+    .map(u=>({ id:u.id,name:u.name,emoji:u.emoji,color:u.color,cost:u.cost,role:u.role,lives:u.lives,range:u.range,targets:u.targets,desc:u.desc,locked:u.unlock>level,unlock:u.unlock }));
+}
+function shiftRow(units,row,dirLR){ const inRow=units.filter(u=>u.alive&&u.row===row); if(!inRow.length)return;
+  inRow.forEach(u=>{ let nc=(u.col+dirLR)%BOARD_COLS; if(nc<0)nc+=BOARD_COLS; u._nc=nc; }); inRow.forEach(u=>{u.col=u._nc;delete u._nc;}); }
+function advance(units){
+  const bt=[];
+  for(let c=0;c<BOARD_COLS;c++){
+    const col=units.filter(u=>u.alive&&u.col===c); if(!col.length)continue;
+    col.forEach(u=>{ u._fr=u.row; u._broke=false; });
+    const order=col.slice().sort((a,b)=>{ const pa=a.side==='player'?(BOARD_ROWS-1-a.row):a.row; const pb=b.side==='player'?(BOARD_ROWS-1-b.row):b.row; return pa-pb; });
+    order.forEach(u=>{ if(u.stunned)return;
+      const dir=u.side==='player'?1:-1; const tr=u.row+dir;
+      if(tr<0||tr>BOARD_ROWS-1){ u.alive=false;u._broke=true;bt.push({side:u.side});return; }
+      const blocked=col.some(o=>o!==u&&!o._broke&&o._fr===tr); if(!blocked) u._fr=tr; });
+    col.forEach(u=>{ if(!u._broke) u.row=u._fr; });
+  }
+  for(let i=units.length-1;i>=0;i--){ if(units[i]._broke){units.splice(i,1);continue;} delete units[i]._fr; }
+  return { breakthroughs:bt };
+}
+function combat(units){
+  const dist=(a,b)=>Math.abs(a.row-b.row)+Math.abs(a.col-b.col); const events=[];
+  units.forEach(u=>{ u._newStun=false; });
+  units.filter(u=>u.alive).slice().forEach(u=>{
+    if(!u.alive)return;
+    if(u.heal>0&&u.healScope){ let ts=[];
+      if(u.healScope==='back1'){ const dir=u.side==='player'?-1:1; const t=units.find(f=>f.alive&&f.side===u.side&&f.col===u.col&&f.row===u.row+dir); if(t)ts=[t]; }
+      else if(u.healScope==='lowest'){ let low=1e9,best=null; units.forEach(f=>{ if(f.alive&&f.side===u.side&&f!==u&&f.lives<f.maxLives&&f.lives<low){low=f.lives;best=f;} }); if(best)ts=[best]; }
+      else if(u.healScope==='allAlly'){ ts=units.filter(f=>f.alive&&f.side===u.side&&f.lives<f.maxLives); }
+      ts.forEach(t=>{ t.lives=Math.min(t.maxLives,t.lives+u.heal); events.push({type:'heal',from:u.uid,to:t.uid,amount:u.heal}); }); }
+    let enemies=units.filter(t=>t.alive&&t.side!==u.side&&dist(u,t)<=u.range); if(!enemies.length)return;
+    let n=u.targets; if(u.tags.indexOf('rage')>=0) n=u.targets+(u.maxLives-u.lives);
+    if(u.tags.indexOf('targetMaxLives')>=0) enemies.sort((a,b)=>b.lives-a.lives||dist(u,a)-dist(u,b)); else enemies.sort((a,b)=>dist(u,a)-dist(u,b));
+    enemies.slice(0,n).forEach(t=>{ t.lives-=u.dmg; events.push({type:'dmg',from:u.uid,fromSide:u.side,to:t.uid,amount:u.dmg});
+      if(u.tags.indexOf('stun')>=0) t._newStun=true;
+      if(t.lives<=0){ t.lives=0;t.alive=false;events.push({type:'die',uid:t.uid}); } });
+  });
+  units.forEach(u=>{ u.stunned=!!u._newStun; delete u._newStun; });
+  const deadPool=units.filter(u=>!u.alive);
+  units.filter(u=>u.alive&&u.tags.indexOf('revive')>=0).forEach(nv=>{
+    const da=deadPool.find(d=>d.side===nv.side&&!d._revived);
+    if(da){ const hr=nv.side==='player'?0:BOARD_ROWS-1; const occ=units.filter(u=>u.alive&&u.row===hr).map(u=>u.col);
+      let c=-1; for(let i=0;i<BOARD_COLS;i++) if(occ.indexOf(i)===-1){c=i;break;}
+      if(c>=0){ da.alive=true;da.lives=1;da.row=hr;da.col=c;da._revived=true;events.push({type:'revive',uid:da.uid}); } } });
+  for(let i=units.length-1;i>=0;i--) if(!units[i].alive) units.splice(i,1);
+  return { events };
+}
+function collectGold(units,side){ let g=0; units.forEach(u=>{ if(u.alive&&u.side===side&&u.gold>0)g+=u.gold; }); return g; }
+function onEnter(unit,units){
+  if(unit.tags&&unit.tags.indexOf('dash')>=0){ const fr=unit.side==='player'?PLAYER_ROWS-1:BOARD_ROWS-PLAYER_ROWS;
+    if(!units.some(o=>o.alive&&o!==unit&&o.row===fr&&o.col===unit.col)) unit.row=fr; }
+  if(unit.tags&&unit.tags.indexOf('knockback')>=0){ const dir=unit.side==='player'?1:-1;
+    const f=units.find(o=>o.alive&&o.side!==unit.side&&o.col===unit.col&&o.row===unit.row+dir);
+    if(f){ const br=f.row+dir; if(br>=0&&br<=BOARD_ROWS-1&&!units.some(o=>o.alive&&o.row===br&&o.col===f.col)) f.row=br; } }
+}
+// 敌方 AI：经济与玩家完全对称，英雄池来自已解锁，每回合最多买2个，不总选最优
+function aiTurn(state,rng){
+  const lvl=state.level||1;
+  const roster=(state.enemyRoster||[]).map(id=>UNIT_MAP[id]).filter(u=>u&&u.unlock<=lvl).sort((a,b)=>a.cost-b.cost);
+  if(!roster.length) return;
+  const maxBuy=state.aiMaxBuy||2;
+  let g=0;
+  while(g++<maxBuy){
+    const occ=state.units.filter(u=>u.alive&&u.side==='enemy'&&u.row===BOARD_ROWS-1).map(u=>u.col);
+    const free=[]; for(let c=0;c<BOARD_COLS;c++) if(occ.indexOf(c)===-1) free.push(c); if(!free.length)break;
+    const af=roster.filter(u=>u.cost<=state.enemyGold); if(!af.length)break;
+    const pk=rng()<0.7?af[af.length-1]:af[Math.floor(rng()*af.length)];
+    const un=makeUnit(pk.id,'enemy'); un.row=BOARD_ROWS-1; un.col=free[Math.floor(rng()*free.length)];
+    state.units.push(un); onEnter(un,state.units); state.enemyGold-=pk.cost;
+    if(rng()<0.45)break;
+  }
+  if(rng()<0.4){ const rows=[4,5,6,7]; shiftRow(state.units,rows[Math.floor(rng()*4)],rng()<0.5?1:-1); }
+}
+
+// ================= 状态 =================
+let S={}, drag=null, floats=[], hoverCell=null, selectedUid='', showRange=true, dialog=null, xp=loadXp();
+function initGame(){
+  S={ phase:'select', roster:[], units:[], playerGold:0, enemyGold:START_GOLD,
+      playerLife:START_LIFE, enemyLife:START_LIFE, round:0, shop:[], enemyRoster:[],
+      slid:false, animating:false, log:'', level:levelOfXp(xp), xpGained:0 };
+  render();
+}
+function toggleRoster(id){
+  const u=UNIT_MAP[id];
+  if(u && u.unlock > levelOfXp(xp)){ S.log='🔒 '+u.name+' 需 Lv'+u.unlock+' 解锁（当前 Lv'+levelOfXp(xp)+'）'; render(); return; }
+  const i=S.roster.indexOf(id);
+  if(i>=0) S.roster.splice(i,1);
+  else { if(S.roster.length>=5){ S.log='最多选 5 位英雄'; render(); return; } S.roster.push(id); }
+  render();
+}
+// 一键随机选择 5 位（只从已解锁中选）
+function randomPick(){
+  const lvl=levelOfXp(xp);
+  S.roster=randomRoster(lvl,5,Math.random);
+  S.log='🎲 随机选择了：'+S.roster.map(id=>UNIT_MAP[id].name).join('、');
+  render();
+}
+// 退出对战：用自定义弹窗二次确认（原生 confirm 在预览 iframe 中会被浏览器拦截导致无效）
+function quitGame(){
+  if(S.animating){ toast('战斗演算中，请稍候'); return; }
+  dialog={ title:'退出对战', text:'确定退出当前对战？本局已获得的经验会保留，但对局进度不会保存。',
+           okText:'退出', cancelText:'继续对战', onOk:function(){ dialog=null; initGame(); } };
+  render();
+}
+function dialogCancel(){ dialog=null; render(); }
+function dialogOk(){ if(dialog&&dialog.onOk) dialog.onOk(); }
+function toggleRange(){ showRange=!showRange; S.log=showRange?'已开启射程常驻显示':'已关闭射程常驻显示'; render(); }
+function confirmRoster(){
+  if(S.roster.length!==5) return;
+  // 敌方阵容从「已解锁」池随机，保证双方强度对等
+  const lvl=levelOfXp(xp);
+  S.enemyRoster=randomRoster(lvl,5,Math.random);
+  S.units=[];
+  S.phase='prepare'; S.round=1; S.level=levelOfXp(xp); S.playerGold=START_GOLD; S.enemyGold=START_GOLD; S.slid=false;
+  S.xpGained=0;
+  S.log='第 1 回合｜从商店把英雄拖到备战区（最下排）上阵';
+  refreshShop(); render();
+}
+function refreshShop(){ S.shop=shopView(S.roster,S.level); }
+function awardXp(n){ xp=Math.max(0,xp+n); saveXp(xp); S.xpGained+=n; S.level=levelOfXp(xp); }
+
+// ===== 放置（拖拽或点击）=====
+function placeAt(row,col,unitId){
+  const u=UNIT_MAP[unitId];
+  if(S.playerGold<u.cost){ toast('金币不足'); return false; }
+  if(row!==0){ toast('只能上阵到备战区（最下第一排）'); return false; }
+  // 任意阵营（含敌方）的存活单位占住该格都不能放，避免棋子重叠
+  const occ=S.units.find(x=>x.alive&&x.row===row&&x.col===col);
+  if(occ){ toast(occ.side==='player'?'该位置已有英雄':'该位置被敌方棋子占据'); return false; }
+  const unit=makeUnit(unitId,'player'); unit.row=row; unit.col=col; unit.anim='enter';
+  S.units.push(unit); onEnter(unit,S.units);
+  unit.row=unit.row; // onEnter 可能改 row（大鹏突进）
+  S.playerGold-=u.cost;
+  S.log=u.name+' 登场！';
+  setTimeout(()=>{ unit.anim=''; render(); },450);
+  return true;
+}
+function slide(row,dir){
+  if(S.phase!=='prepare'||S.slid) return;
+  shiftRow(S.units,row,dir); S.slid=true;
+  S.log='滑动了第 '+(row+1)+' 排（本回合滑动已用）'; render();
+}
+function toast(t){ S.log='⚠️ '+t; render(); }
+
+// ===== 回合推进（带动画）=====
+async function startRound(){
+  if(S.phase!=='prepare'||S.animating) return;
+  if(S.units.filter(u=>u.alive&&u.side==='player').length===0){ toast('先放至少一个英雄上场'); return; }
+  S.animating=true; S.phase='battle'; S.log='敌方行动…'; render();
+  aiTurn({units:S.units,enemyGold:S.enemyGold,enemyRoster:S.enemyRoster,round:S.round},rng);
+  await sleep(400);
+
+  // 前进动画：记录每个棋子的方向，播放 advanceMove
+  S.units.forEach(u=>{ if(u.alive) u.anim='advance'; });
+  S.log='全体向前推进 1 格…'; render();
+  const adv=advance(S.units);
+  adv.breakthroughs.forEach(b=>{ if(b.side==='player'){ S.enemyLife--; S.log='🔥 你的英雄攻入敌方大本营！敌 -1 命'; } else { S.playerLife--; S.log='💥 敌方攻入你的大本营！你 -1 命'; } });
+  await sleep(420);
+  S.units.forEach(u=>{ u.anim=''; });
+  render();
+  await sleep(200);
+
+  // 攻击动画 + 飘字
+  S.units.filter(u=>u.alive).forEach(u=>{ u.anim='attack'; });
+  // 模拟攻击方向：先算事件
+  const preState=S.units.map(u=>({uid:u.uid,lives:u.lives}));
+  const res=combat(S.units);
+  S.log='⚔️ 释放技能 & 结算';
+  // 生成飘字（基于事件，位置取目标当前坐标，若已阵亡取其最后位置）
+  floats=[];
+  res.events.forEach(e=>{
+    let target=S.units.find(u=>u.uid===e.to||u.uid===e.uid);
+    if(!target) return;
+    if(e.type==='dmg'){ target.anim='hurt'; floats.push({uid:target.uid,row:target.row,col:target.col,text:'-'+e.amount+'命',cls:'dmg'}); }
+    else if(e.type==='heal'){ floats.push({uid:target.uid,row:target.row,col:target.col,text:'+'+e.amount+'命',cls:'heal'}); }
+    else if(e.type==='revive'){ floats.push({uid:target.uid,row:target.row,col:target.col,text:'复活!',cls:'revive'}); }
+  });
+  render();
+  await sleep(500);
+  S.units.forEach(u=>{ if(u.anim==='attack'||u.anim==='hurt') u.anim=''; });
+  floats=[]; render();
+  await sleep(220);
+
+  if(S.enemyLife<=0||S.playerLife<=0){
+    const win=S.enemyLife<=0;
+    awardXp(win?XP_WIN:XP_LOSE);
+    S.phase='over'; S.animating=false; render(); return;
+  }
+  S.round++;
+  awardXp(XP_PER_ROUND);   // 每回合累积经验
+  // 经济结算：基础收入 + 利息(每5金+1，上限5) + 产金英雄 — 玩家与敌方同规则
+  const inc=GOLD_PER_ROUND, gExtra=collectGold(S.units,'player');
+  const interest=calcInterest(S.playerGold);
+  S.playerGold+=inc+interest+gExtra;
+  const eInterest=calcInterest(S.enemyGold);
+  S.enemyGold+=GOLD_PER_ROUND+eInterest+collectGold(S.units,'enemy');
+  S.lastInterest=interest;
+  S.slid=false; S.phase='prepare'; S.animating=false;
+  S.log='第 '+S.round+' 回合｜金币 +'+(inc+interest+gExtra)+
+    (interest?'（利息 +'+interest+'）':'')+(gExtra?'（产金英雄 +'+gExtra+'）':'')+'｜经验 +'+XP_PER_ROUND;
+  refreshShop(); render();
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+// ================= 渲染 =================
+// 双方生命用完全一致的样式渲染（对称）
+function hearts(n){ let h=''; for(let i=0;i<START_LIFE;i++) h+=`<span class="hp ${i<n?'':'off'}">${i<n?'❤️':'🤍'}</span>`; return h; }
+// 英雄属性可视化：命数 / 金币 / 射程 / 目标数 / 治疗
+function attrRow(u){
+  let h=`<div class="attr-row">`;
+  h+=`<span class="attr hp"><span class="ico">❤️</span>${u.lives}</span>`;
+  h+=`<span class="attr gold"><span class="ico">💰</span>${u.cost}</span>`;
+  h+=`<span class="attr rng"><span class="ico">🎯</span>${u.range}</span>`;
+  h+=`<span class="attr tgt"><span class="ico">⚔️</span>${u.targets}</span>`;
+  if(u.heal>0) h+=`<span class="attr heal"><span class="ico">➕</span>${u.heal}</span>`;
+  if(u.gold>0) h+=`<span class="attr gold"><span class="ico">🪙</span>+${u.gold}/回合</span>`;
+  h+=`</div>`;
+  return h;
+}
+// 迷你射程网格：以英雄为中心 5x5，曼哈顿距离<=range 高亮
+function rangeGrid(range){
+  let h='<div class="range-grid">';
+  for(let r=-2;r<=2;r++){
+    for(let c=-2;c<=2;c++){
+      const d=Math.abs(r)+Math.abs(c);
+      h+=`<div class="rg ${d===0?'self':(d<=range?'in':'')}"></div>`;
+    }
+  }
+  return h+'</div>';
+}
+// 拖拽时计算某格的射程高亮范围
+function inRangeOf(row,col,range,tr,tc){ return (Math.abs(tr-row)+Math.abs(tc-col))<=range; }
+
+function render(){
+  const app=document.getElementById('app');
+  if(S.phase==='select'){ renderSelect(app); return; }
+  let h='';
+  // 顶栏：双方生命对称显示（左敌 右我，样式一致）+ 退出按钮 —— 分区 area-top
+  h+=`<div class="area-top"><div class="topbar">
+    <div class="life-box"><span class="life-side">敌方</span><div class="lives">${hearts(S.enemyLife)}</div></div>
+    <div class="round-chip">第 ${S.round} 回合</div>
+    <div class="life-box"><span class="life-side">我方</span><div class="lives">${hearts(S.playerLife)}</div></div>
+    <button class="quit-btn" onclick="quitGame()">✕ 退出</button>
+  </div></div>`;
+  h+=`<div class="area-log"><div class="logbar">${S.log}</div></div>`;
+  // 棋盘分区：敌方大本营标签 + 棋盘(在 board-wrap 内等比缩放) + 我方大本营标签
+  h+=`<div class="area-board"><div class="base-label base-enemy">▲ 敌方大本营</div><div class="board-wrap"><div class="board" id="board">`;
+  for(let r=BOARD_ROWS-1;r>=0;r--){
+    const isP=r<=PLAYER_ROWS-1, isB=r===0;
+    const canSlide=S.phase==='prepare'&&isP&&!S.slid;
+    h+=`<div class="brow" data-row="${r}">`;
+    if(canSlide) h+=`<button class="slide-btn left" onclick="slide(${r},-1)">‹</button>`;
+    for(let c=0;c<BOARD_COLS;c++){
+      const zone=isB?'bz':(isP?'pz':'ez');
+      const u=S.units.find(x=>x.alive&&x.row===r&&x.col===c);
+      const fl=floats.filter(f=>f.row===r&&f.col===c);
+      // 射程高亮（三种来源，优先级从高到低）：
+      //   1) 拖拽中：以 hover 格为中心 + 己方空格标绿(droppable) + 敌方半区标红(bad)
+      //   2) 选中某个己方棋子：以该棋子为中心
+      //   3) 常驻（showRange 开启）：所有己方棋子的射程，用淡金 dimrange 一直显示
+      // dropCls 与 rangeCls 是两个独立维度，可叠加：绿底(可放) + 金边(射程内)
+      let rangeCls='', dropCls='';
+      const sel = selectedUid ? S.units.find(x=>x.uid===selectedUid) : null;
+      if(!isP){ if(drag&&drag.heroRange!=null) rangeCls='bad'; }
+      else if(drag&&drag.heroRange!=null){
+        if(!cellOccupied(r,c)) dropCls='droppable';        // 己方空格 → 绿色可放
+        if(hoverCell){
+          const d=Math.abs(hoverCell.row-r)+Math.abs(hoverCell.col-c);
+          if(d===0) rangeCls='range-src';
+          else if(d<=drag.heroRange) rangeCls='inrange';
+        }
+      } else if(sel){
+        const d=Math.abs(sel.row-r)+Math.abs(sel.col-c);
+        if(d===0) rangeCls='range-src';
+        else if(d<=sel.range) rangeCls='inrange';
+      } else if(showRange){
+        // 常驻：只要落在任意一个己方棋子的射程内就点亮
+        const covered=S.units.some(u=>u.alive&&u.side==='player'&&(Math.abs(u.row-r)+Math.abs(u.col-c))<=u.range);
+        if(covered) rangeCls='dimrange';
+      }
+      h+=`<div class="cell ${zone} ${rangeCls} ${dropCls}" data-row="${r}" data-col="${c}">`;
+      if(u){
+        let dots=''; for(let i=0;i<u.maxLives;i++) dots+=`<span class="lp ${i<u.lives?'':'empty'}"></span>`;
+        h+=`<div class="pc ${u.side} ${u.anim?'anim-'+u.anim:''} ${selectedUid===u.uid?'sel':''}" data-uid="${u.uid}">
+          <div class="pc-emoji"><img class="sprite" src="assets/${u.id}.png" alt="${u.name}" draggable="false" onerror="this.parentNode.textContent='${u.emoji}'"></div><div class="pc-name">${u.name}</div><div class="lives-row">${dots}</div>
+        </div>`;
+      }
+      fl.forEach(f=>{ h+=`<div class="float ${f.cls}">${f.text}</div>`; });
+      h+=`</div>`;
+    }
+    if(canSlide) h+=`<button class="slide-btn right" onclick="slide(${r},1)">›</button>`;
+    h+=`</div>`;
+  }
+  h+=`</div></div><div class="base-label base-player">▼ 你的大本营（最下排=备战区）</div></div>`;
+
+  // 我方状态条（金币/利息/产金/经验）—— 分区 area-status
+  const nextInt=calcInterest(S.playerGold);
+  const toNext=INTEREST_PER-(S.playerGold%INTEREST_PER);
+  h+=`<div class="area-status"><div class="mystatus">
+    <div class="ms-item"><div class="ms-label">我的金币</div><div class="ms-val">💰${S.playerGold}</div></div>
+    <div class="ms-item"><div class="ms-label">下回合利息</div><div class="ms-val small">+${nextInt}</div>
+      <div class="ms-sub">${S.playerGold>=25?'已达上限':('再'+toNext+'金+1')}</div></div>
+    <div class="ms-item"><div class="ms-label">产金英雄</div><div class="ms-val small">+${collectGold(S.units,'player')}</div></div>
+    <div class="ms-item"><div class="ms-label">本局经验</div><div class="ms-val small">+${S.xpGained}</div></div>
+  </div></div>`;
+
+  if(S.phase==='prepare'){
+    h+=`<div class="area-shop"><div class="shop-title"><span>商店（按价格排序）</span><span style="color:#8878b0">拖拽/点击上阵</span></div>`;
+    h+=`<div class="shop">`;
+    S.shop.forEach(s=>{
+      const u=UNIT_MAP[s.id];
+      const dis=S.playerGold<s.cost||s.locked;
+      h+=`<div class="shop-card ${dis?'disabled':''} ${s.locked?'locked':''}"
+            style="border-color:${s.color}" data-id="${s.id}">
+        <div class="sc-emoji" style="background:${s.color}"><img class="sprite" src="assets/${s.id}.png" alt="" draggable="false" onerror="this.parentNode.textContent='${s.emoji}'"></div>
+        <div class="sc-body">
+          <div class="sc-name">${s.name}</div>
+          ${attrRow(u)}
+          <div class="sc-tip">${u.role}</div>
+        </div>
+        ${s.locked?`<div class="sc-lock">Lv${s.unlock}解锁</div>`:''}
+      </div>`;
+    });
+    h+=`</div>`;
+    // 卖出区：拖动已上阵棋子时显示，覆盖商店位置
+    h+=`<div class="sell-zone"><span class="sz-ico">🗑</span><span>拖到此处卖掉</span><span style="font-size:11px;opacity:0.85">返还金币</span></div>`;
+    h+=`</div>`;
+    // 控制区：开战按钮 + 操作提示 + 图例/射程开关 —— 分区 area-ctrl
+    h+=`<div class="area-ctrl">`;
+    h+=`<button class="btn btn-go" onclick="startRound()">▶ 结束购买 · 推进战斗</button>`;
+    h+=`<div class="hint">从商店拖英雄到 <b style="color:#6bff9a">备战区（最下一排）</b> 上阵 · ${S.slid?'本回合已滑动':'点 ‹ › 滑动任意一排（每回合1次）'}</div>`;
+    h+=`<div class="legend">
+      <span><i class="sw g"></i>可上阵</span>
+      <span><i class="sw y"></i>攻击范围</span>
+      <span><i class="sw r"></i>不可放</span>
+      <span style="cursor:pointer;color:#ffd45e" onclick="toggleRange()">${showRange?'👁 射程：开':'👁 射程：关'}</span>
+    </div>`;
+    h+=`</div>`;
+  }
+  if(S.phase==='battle') h+=`<div class="area-ctrl"><div class="hint" style="font-size:12px;color:#ffd45e">⚔️ 推进 & 战斗演算中…</div></div>`;
+
+  // 自定义确认弹窗（覆盖在最上层）
+  if(dialog){
+    h+=`<div class="mask" style="z-index:300">
+      <div class="card" style="max-width:300px">
+        <h2>${dialog.title}</h2>
+        <div class="sub" style="margin:10px 0 16px">${dialog.text}</div>
+        <div class="btn-row">
+          <button class="btn btn-random" onclick="dialogCancel()">${dialog.cancelText}</button>
+          <button class="btn btn-confirm" onclick="dialogOk()">${dialog.okText}</button>
+        </div>
+      </div></div>`;
+  }
+  app.innerHTML=h;
+
+  if(S.phase==='over') renderOver(app);
+}
+
+function renderSelect(app){
+  const ep=expProgress(xp);
+  let h=`<div class="mask"><div class="card">
+    <h2>山海战棋 · 组建阵容</h2>
+    <div class="sub">选 5 位神话英雄 · 未解锁的英雄无法选中</div>`;
+  // 经验条（固定在顶部）
+  h+=`<div class="expbar-wrap">
+    <span class="lv-badge">Lv ${ep.lv}</span>
+    <div class="exp-track"><div class="exp-fill" style="width:${ep.pct}%"></div></div>
+    <span class="exp-num">${ep.max?'已满级':ep.cur+' / '+ep.need+' XP'}</span>
+  </div>`;
+  // 英雄列表（中间可滚动区）
+  h+=`<div class="roster-scroll">`;
+  [1,2,3,4,5].forEach(tier=>{
+    const list=UNITS.filter(u=>u.unlock===tier);
+    const locked=tier>ep.lv;
+    h+=`<div class="tier-title">Lv${tier} ${tier===1?'（初始解锁）':(locked?'（未解锁）':'解锁')}</div><div class="roster">`;
+    list.forEach(u=>{
+      const sel=S.roster.indexOf(u.id)>=0?'sel':'';
+      h+=`<div class="rc ${sel} ${locked?'locked':''}" onclick="toggleRoster('${u.id}')">
+        <div class="rc-emoji" style="background:${u.color}"><img class="sprite" src="assets/${u.id}.png" alt="" draggable="false" onerror="this.parentNode.textContent='${u.emoji}'"></div>
+        <div class="rc-name">${u.name}</div><div class="rc-cost">💰${u.cost}</div>
+        ${attrRow(u)}${rangeGrid(u.range)}
+        <div class="rc-desc">${u.desc}</div>
+        ${locked?`<div class="rc-lock"><span class="lk">🔒</span><span class="lt">Lv${u.unlock} 解锁</span></div>`:''}
+      </div>`;
+    });
+    h+=`</div>`;
+  });
+  h+=`</div>`; // roster-scroll 结束
+  // 底部固定区：已选计数 + 按钮（永远可见，不需滚动）
+  h+=`<div class="sub" style="margin-top:8px;font-size:10px;flex-shrink:0">已选 ${S.roster.length}/5 · 每回合 +${XP_PER_ROUND} XP，胜利 +${XP_WIN} / 失败 +${XP_LOSE}</div>`;
+  h+=`<div class="btn-row" style="flex-shrink:0">
+    <button class="btn btn-random" onclick="randomPick()">🎲 随机选择</button>
+    <button class="btn btn-confirm" onclick="confirmRoster()">确认阵容 · 开战</button>
+  </div></div></div>`;
+  app.innerHTML=h;
+}
+
+function renderOver(app){
+  const win=S.enemyLife<=0;
+  const ep=expProgress(xp);
+  const d=document.createElement('div');
+  d.innerHTML=`<div class="mask"><div class="card">
+    <h2 style="color:${win?'#ffd45e':'#ff8a8a'};font-size:20px">${win?'🏆 胜利！':'💀 失败'}</h2>
+    <div class="sub">${win?'你攻破了敌方大本营':'你的大本营被攻破'} · 坚持到第 ${S.round} 回合</div>
+    <div class="expbar-wrap">
+      <span class="lv-badge">Lv ${ep.lv}</span>
+      <div class="exp-track"><div class="exp-fill" style="width:${ep.pct}%"></div></div>
+      <span class="exp-num">${ep.max?'已满级':ep.cur+' / '+ep.need+' XP'}</span>
+    </div>
+    <div class="sub" style="margin-top:6px">本局获得 ${S.xpGained} XP</div>
+    <button class="btn btn-confirm" onclick="initGame()">再来一局</button></div></div>`;
+  app.appendChild(d.firstChild);
+}
+
+function showInfo(id){
+  const u=UNIT_MAP[id]; if(!u) return;
+  S.log=u.emoji+' '+u.name+'：'+u.desc+'（'+u.myth+'）'; render();
+}
+// 点击棋盘上的棋子：己方则高亮其攻击范围（再点取消），并展示信息
+function onTapPiece(uid){
+  const u=S.units.find(x=>x.uid===uid);
+  if(!u) return;
+  if(u.side==='player'){
+    if(selectedUid===uid){ selectedUid=''; S.log='已取消射程显示'; }
+    else {
+      selectedUid=uid;
+      S.log='🎯 '+u.name+' 的攻击范围：'+u.range+' 格内可打到 '+u.targets+' 个目标（再点一次取消）';
+    }
+  } else {
+    S.log='敌方 '+u.name+'：'+u.lives+'/'+u.maxLives+' 命，射程 '+u.range;
+  }
+  render();
+}
+function quickPlace(id){
+  // 点击快捷放置：找备战排(row0)第一个空位
+  for(let c=0;c<BOARD_COLS;c++){
+    if(!S.units.some(x=>x.alive&&x.row===0&&x.col===c)){ if(placeAt(0,c,id)) render(); return; }
+  }
+  toast('备战排已满');
+}
+
+// ===== 拖拽（Pointer Events：同时兼容鼠标与手机触屏，替代 HTML5 drag-drop）=====
+// 格子是否被任意存活单位占据
+function cellOccupied(r,c){ return S.units.some(u=>u.alive&&u.row===r&&u.col===c); }
+
+let pending=null;            // pointerdown 后待定，移动超过阈值才转为真正拖拽（区分点击/拖拽）
+const DRAG_THRESH=6;
+
+function spriteSrcOf(d){
+  const id = d.type==='shop' ? d.id : (S.units.find(u=>u.uid===d.uid)||{}).id;
+  return 'assets/'+id+'.png';
+}
+function onDragPointerDown(e){
+  if(S.phase!=='prepare'||S.animating||dialog) return;
+  const card=e.target.closest('.shop-card');
+  const pc=e.target.closest('.pc.player');
+  let d=null;
+  if(card){ if(card.classList.contains('disabled')||card.classList.contains('locked')) return;
+    d={type:'shop', id:card.dataset.id}; }
+  else if(pc){ d={type:'piece', uid:pc.dataset.uid}; }
+  else return;
+  d.startX=e.clientX; d.startY=e.clientY; d.moved=false; d.pid=e.pointerId;
+  pending=d;
+}
+function onDragPointerMove(e){
+  if(!pending||e.pointerId!==pending.pid) return;
+  if(!pending.moved){
+    if(Math.hypot(e.clientX-pending.startX, e.clientY-pending.startY)<DRAG_THRESH) return;
+    pending.moved=true; drag=pending; selectedUid='';
+    const u = drag.type==='shop'?UNIT_MAP[drag.id]:S.units.find(x=>x.uid===drag.uid);
+    drag.heroRange=u?u.range:1;
+    makeGhost(); markDroppable();
+    if(drag.type==='piece') toggleSell(true);
+  }
+  e.preventDefault();
+  moveGhost(e.clientX,e.clientY);
+  updateHover(e.clientX,e.clientY);
+}
+function onDragPointerUp(e){
+  if(!pending||e.pointerId!==pending.pid) return;
+  const d=pending; pending=null;
+  if(!d.moved){ // 未移动 → 视为点击
+    if(d.type==='shop') quickPlace(d.id);
+    else if(d.type==='piece') onTapPiece(d.uid);
+    return;
+  }
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  const cell=el&&el.closest?el.closest('.cell'):null;
+  const sell=el&&el.closest?el.closest('.sell-zone'):null;
+  if(d.type==='shop'){
+    if(cell) placeAt(Number(cell.dataset.row),Number(cell.dataset.col),d.id);
+  } else if(d.type==='piece'){
+    const u=S.units.find(x=>x.uid===d.uid);
+    if(u){
+      if(sell){ sellUnit(u); }
+      else if(cell){
+        const r=Number(cell.dataset.row), c=Number(cell.dataset.col);
+        if(r>PLAYER_ROWS-1){ toast('不能移到敌方半区'); }
+        else { const occ=S.units.find(x=>x.alive&&x.row===r&&x.col===c);
+          if(occ&&occ.uid!==u.uid){ occ.row=u.row; occ.col=u.col; }  // 交换
+          u.row=r; u.col=c; S.log=u.name+' 移动'; }
+      }
+    }
+  }
+  removeGhost(); drag=null; hoverCell=null; render();
+}
+// 跟随指针的幽灵图
+function makeGhost(){ removeGhost();
+  const g=document.createElement('div'); g.className='drag-ghost';
+  g.innerHTML='<img src="'+spriteSrcOf(drag)+'" onerror="this.style.display=\'none\'">';
+  document.body.appendChild(g); drag.ghost=g; }
+function moveGhost(x,y){ if(drag&&drag.ghost){ drag.ghost.style.left=x+'px'; drag.ghost.style.top=y+'px'; } }
+function removeGhost(){ if(drag&&drag.ghost&&drag.ghost.parentNode) drag.ghost.parentNode.removeChild(drag.ghost); if(drag) drag.ghost=null; toggleSell(false); }
+// 拖动棋子时用「卖出区」覆盖商店
+function toggleSell(on){ const sz=document.querySelector('.sell-zone'), sh=document.querySelector('.shop');
+  if(sz){ sz.style.display=on?'flex':'none'; if(!on) sz.classList.remove('sell-hover'); }
+  if(sh) sh.style.display=on?'none':''; }
+// 标记可放格：商店上阵只能备战区(row0)空格；已上阵棋子可在己方 4 排空格移动
+function markDroppable(){
+  document.querySelectorAll('.cell').forEach(c=>{
+    c.classList.remove('droppable','dragover','bad','inrange','range-src');
+    const r=Number(c.dataset.row), cc=Number(c.dataset.col), isP=r<=PLAYER_ROWS-1;
+    if(drag.type==='shop'){ if(r===0&&!cellOccupied(r,cc)) c.classList.add('droppable'); else if(r!==0) c.classList.add('bad'); }
+    else if(drag.type==='piece'){ if(isP&&!cellOccupied(r,cc)) c.classList.add('droppable'); else if(!isP) c.classList.add('bad'); }
+  });
+}
+// 当前指向格/卖出区的高亮反馈
+function updateHover(x,y){
+  document.querySelectorAll('.cell.dragover').forEach(c=>c.classList.remove('dragover'));
+  const szAll=document.querySelector('.sell-zone'); if(szAll) szAll.classList.remove('sell-hover');
+  const el=document.elementFromPoint(x,y); if(!el||!el.closest) return;
+  const cell=el.closest('.cell'), sell=el.closest('.sell-zone');
+  if(cell&&cell.classList.contains('droppable')) cell.classList.add('dragover');
+  else if(sell&&drag.type==='piece') sell.classList.add('sell-hover');
+}
+// 卖出棋子：移除并返还金币（成本全额）
+function sellUnit(u){
+  const cost=(UNIT_MAP[u.id]||{}).cost||0;
+  const i=S.units.indexOf(u); if(i>=0) S.units.splice(i,1);
+  S.playerGold+=cost; S.log='💰 卖出 '+u.name+'，返还 '+cost+' 金币';
+}
+// 一次性委托绑定（document 级，render 重建 DOM 也不受影响）
+document.addEventListener('pointerdown', onDragPointerDown);
+document.addEventListener('pointermove', onDragPointerMove, {passive:false});
+document.addEventListener('pointerup', onDragPointerUp);
+document.addEventListener('pointercancel', function(){ if(pending){ pending=null; removeGhost(); drag=null; hoverCell=null; render(); } });
+
+initGame();
+</script>
+</body>
+</html>
