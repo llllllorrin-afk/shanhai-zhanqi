@@ -191,6 +191,12 @@
               border-radius:10px; padding:7px 10px;
               backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
   .ms-item { display:flex; flex-direction:column; align-items:center; gap:2px; }
+
+  /* 移动端隐藏 mystatus 第3、4项（产金英雄/本局经验），信息在棋子详情面板看 */
+  @media (max-width:819px){
+    .mystatus .ms-item:nth-child(3),
+    .mystatus .ms-item:nth-child(4) { display:none; }
+  }
   .ms-label { font-size:9px; color:#6b6354; }
   .ms-val { font-size:16px; font-weight:700; color:#8a6d3b; }
   .ms-val.small { font-size:13px; }
@@ -279,7 +285,6 @@
   .tier-title { font-size:11px; color:#8a6d3b; margin:10px 0 5px; text-align:left;
                 border-top:1px solid rgba(58,48,36,0.2); padding-top:6px; font-weight:700; }
 
-  .sc-body { display:flex; flex-direction:column; align-items:center; gap:1px; min-width:0; }
   .shop .range-grid { display:none; }
 
   /* ============ 极矮屏兜底 ============ */
