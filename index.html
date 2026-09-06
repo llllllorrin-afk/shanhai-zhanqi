@@ -504,8 +504,12 @@ function randomPick(){
 // 退出对战：用自定义弹窗二次确认（原生 confirm 在预览 iframe 中会被浏览器拦截导致无效）
 function quitGame(){
   if(S.animating){ toast('战斗演算中，请稍候'); return; }
-  dialog={ title:'退出对战', text:'确定退出当前对战？本局已获得的经验会保留，但对局进度不会保存。',
-           okText:'退出', cancelText:'继续对战', onOk:function(){ dialog=null; initGame(); } };
+  dialog={ title:'退出对战', text:'确定退出当前对战？中途退出将获得 0 经验，对局进度也不会保存。',
+           okText:'退出', cancelText:'继续对战', onOk:function(){
+             // 中途退出：本局经验清零，扣回已累积的每回合经验
+             if(S.xpGained>0){ xp=Math.max(0,xp-S.xpGained); saveXp(xp); }
+             dialog=null; initGame();
+           } };
   render();
 }
 function dialogCancel(){ dialog=null; render(); }
